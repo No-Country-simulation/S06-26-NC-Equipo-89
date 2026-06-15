@@ -1,0 +1,114 @@
+{
+  "name": "Feedback Ingest a FastAPI",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "recibir-feedback",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "8905a96d-3e6f-4f74-8b1a-bd301fb9b5a1",
+      "name": "Webhook (Tally/Forms/WA)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "f29db4ef-8a9d-47a3-ab8c-1e24741e21b2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e2c3a505-1a84-48d6-9cc9-bf888df79001",
+              "name": "external_id",
+              "value": "={{ $json.body.id_mensaje || $execution.id }}",
+              "type": "string"
+            },
+            {
+              "id": "1bc95f5c-dc8c-4fdf-9739-160fa1bc3a8e",
+              "name": "fuente",
+              "value": "={{ $json.body.fuente || 'webhook' }}",
+              "type": "string"
+            },
+            {
+              "id": "b182eb4e-f2bd-4bb0-80d0-ffbd1ef0ff83",
+              "name": "texto",
+              "value": "={{ $json.body.mensaje }}",
+              "type": "string"
+            },
+            {
+              "id": "824f9c89-6cb4-49c0-9a25-c6b7ef984576",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "90e03e5c-7557-41e9-ba13-fb33758b29ff",
+              "name": "metadata",
+              "value": "={{ { cliente_info: $json.body.metadata_cliente } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "22ffdc65-0205-4c01-bf17-ab8c18ec5ed4",
+      "name": "Normalizar a Contrato FastAPI",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/ingest",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"external_id\": \"{{ $json.external_id }}\",\n  \"fuente\": \"{{ $json.fuente }}\",\n  \"texto\": \"{{ $json.texto }}\",\n  \"timestamp\": \"{{ $json.timestamp }}\",\n  \"metadata\": {{ JSON.stringify($json.metadata) }}\n}",
+        "options": {}
+      },
+      "id": "eb3694f0-466d-495d-9ce5-e410b0eef462",
+      "name": "POST a FastAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (Tally/Forms/WA)": {
+      "main": [
+        [
+          {
+            "node": "Normalizar a Contrato FastAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar a Contrato FastAPI": {
+      "main": [
+        [
+          {
+            "node": "POST a FastAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "f782cb9e-561f-4a0b-93de-b82736c0a0c4"
+}
