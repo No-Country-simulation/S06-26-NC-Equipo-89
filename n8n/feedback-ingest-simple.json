@@ -1,5 +1,5 @@
 {
-  "name": "Feedback Ingest a FastAPI",
+  "name": "Feedback Ingest — prueba simple (1 webhook)",
   "nodes": [
     {
       "parameters": {
@@ -9,14 +9,11 @@
         "options": {}
       },
       "id": "8905a96d-3e6f-4f74-8b1a-bd301fb9b5a1",
-      "name": "Webhook (Tally/Forms/WA)",
+      "name": "Webhook prueba",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [
-        200,
-        300
-      ],
-      "webhookId": "f29db4ef-8a9d-47a3-ab8c-1e24741e21b2"
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "recibir-feedback-test"
     },
     {
       "parameters": {
@@ -59,16 +56,22 @@
       "id": "22ffdc65-0205-4c01-bf17-ab8c18ec5ed4",
       "name": "Normalizar a Contrato FastAPI",
       "type": "n8n-nodes-base.set",
-      "typeVersion": 3.2,
-      "position": [
-        420,
-        300
-      ]
+      "typeVersion": 3.4,
+      "position": [420, 300]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/ingest",
+        "url": "={{ $env.FASTAPI_INGEST_URL || 'http://host.docker.internal:8000/ingest' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.API_KEY }}"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"external_id\": \"{{ $json.external_id }}\",\n  \"fuente\": \"{{ $json.fuente }}\",\n  \"texto\": \"{{ $json.texto }}\",\n  \"timestamp\": \"{{ $json.timestamp }}\",\n  \"metadata\": {{ JSON.stringify($json.metadata) }}\n}",
@@ -77,15 +80,12 @@
       "id": "eb3694f0-466d-495d-9ce5-e410b0eef462",
       "name": "POST a FastAPI",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [
-        640,
-        300
-      ]
+      "typeVersion": 4.2,
+      "position": [640, 300]
     }
   ],
   "connections": {
-    "Webhook (Tally/Forms/WA)": {
+    "Webhook prueba": {
       "main": [
         [
           {
@@ -109,6 +109,7 @@
     }
   },
   "active": false,
-  "settings": {},
-  "versionId": "f782cb9e-561f-4a0b-93de-b82736c0a0c4"
+  "settings": {
+    "executionOrder": "v1"
+  }
 }

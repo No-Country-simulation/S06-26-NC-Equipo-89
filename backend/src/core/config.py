@@ -1,4 +1,8 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
+_BACKEND_ENV = Path(__file__).resolve().parents[2] / ".env"
 
 class Settings(BaseSettings):
     supabase_url: str = ""
@@ -17,6 +21,9 @@ class Settings(BaseSettings):
     copilot_match_count: int = 10
     copilot_default_since_days: int = 7
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(str(_ROOT_ENV), str(_BACKEND_ENV), ".env"),
+        extra="ignore",
+    )
 
 settings = Settings()

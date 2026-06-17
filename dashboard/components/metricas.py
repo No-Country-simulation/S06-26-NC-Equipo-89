@@ -3,7 +3,7 @@ Componente: KPIs de alto nivel.
 Muestra 4 tarjetas de métricas en la parte superior del dashboard.
 """
 import streamlit as st
-from dashboard.supabase_queries import get_kpis
+from dashboard.supabase_queries import get_kpis, get_ultimo_lote_metricas
 
 
 def render():
@@ -45,3 +45,35 @@ def render():
             label="🔍 Patrones Detectados",
             value=f"{kpis['total_patrones']:,}",
         )
+
+    try:
+        ultimo = get_ultimo_lote_metricas()
+    except Exception:
+        ultimo = None
+
+    if ultimo and ultimo.get("datos"):
+        datos = ultimo["datos"]
+        st.markdown("---")
+        st.markdown("**Último lote procesado**")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.metric("Mensajes en lote", datos.get("total_procesados", 0))
+        with c2:
+            sent = datos.get("sentimientos", {})
+            st.caption(
+                f"Positivo: {sent.get('Positivo', 0)} · "
+                f"Negativo: {sent.get('Negativo', 0)} · "
+                f"Neutral: {sent.get('Neutral', 0)}"
+            )
+        with c3:
+            urg = datos.get("urgencias", {})
+            st.caption(
+                f"Urgencia Alta: {urg.get('Alta', 0)} · "
+                f"Media: {urg.get('Media', 0)} · "
+                f"Baja: {urg.get('Baja', 0)}"
+            )
+        if datos.get("categorias_top"):
+            st.caption(
+                "Top categorías: "
+                + ", ".join(f"{k} ({v})" for k, v in datos["categorias_top"].items())
+            )

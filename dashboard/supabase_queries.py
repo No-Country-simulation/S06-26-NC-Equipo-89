@@ -26,11 +26,6 @@ def get_kpis() -> dict:
     """Retorna métricas de alto nivel para las tarjetas del dashboard."""
     client = get_client()
 
-    # Total mensajes procesados hoy
-    hoy = "now()::date"
-    raw = client.rpc("get_kpis_hoy").execute()
-
-    # Fallback con queries manuales si el RPC no existe
     total_res = (
         client.table("feedback_raw")
         .select("id", count="exact")
@@ -151,3 +146,61 @@ def get_patrones(impacto_filtro: str | None = None) -> list[dict]:
         query = query.eq("impacto", impacto_filtro)
     res = query.execute()
     return res.data or []
+
+
+# ─── EXPORT / ÚLTIMO LOTE ──────────────────────────────────────────────────────
+
+@st.cache_data(ttl=60)
+def get_clasificados_export() -> list[dict]:
+    """Datos clasificados con texto original para export CSV/JSON."""
+    client = get_client()
+    res = (
+        client.table("feedback_clasificado")
+        .select(
+            "external_id, sentimiento, urgencia, idioma, categorias, confianza, resumen, "
+            "created_at, feedback_raw(fuente, texto, timestamp)"
+        )
+        .order("created_at", desc=True)
+        .execute()
+    )
+    rows = []
+    for item in (res.data or []):
+        raw = item.get("feedback_raw") or {}
+        rows.append({
+            "external_id": item.get("external_id", ""),
+            "fuente": raw.get("fuente", ""),
+            "texto": raw.get("texto", ""),
+            "timestamp": raw.get("timestamp", ""),
+            "sentimiento": item.get("sentimiento", ""),
+            "urgencia": item.get("urgencia", ""),
+            "idioma": item.get("idioma", ""),
+            "categorias": item.get("categorias", []),
+            "confianza": item.get("confianza"),
+            "resumen": item.get("resumen", ""),
+            "clasificado_at": item.get("created_at", ""),
+        })
+    return rows
+
+
+@st.cache_data(ttl=60)
+def get_ultimo_lote_metricas() -> dict | None:
+    """Última fila de feedback_metricas (resumen del batch más reciente)."""
+    client = get_client()
+    res = (
+        client.table("feedback_metricas")
+        .select("datos_metricas, created_at")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if not res.data:
+        return None
+    row = res.data[0]
+    datos = row.get("datos_metricas") or {}
+    if isinstance(datos, str):
+        import json
+        datos = json.loads(datos)
+    return {
+        "created_at": row.get("created_at"),
+        "datos": datos,
+    }

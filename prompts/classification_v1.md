@@ -13,6 +13,8 @@ Instrucciones:
    - "categorias": Una lista de tags relevantes (ej. ["Atención al Cliente", "Precios", "Producto", "App", "Logística", "Facturación"]).
    - "urgencia": Nivel de urgencia. Solo puede ser "Alta" (amenaza de cancelación, furia, riesgo legal, caída del sistema), "Media" (queja estándar, problema menor, sugerencia), o "Baja" (duda general, halago, neutral).
    - "idioma": Idioma detectado, usualmente "Español".
+   - "confianza": Número entre 0.0 y 1.0 indicando qué tan seguro estás de la clasificación.
+   - "resumen": Una oración que resume el mensaje del cliente.
 
 Texto del cliente:
 {texto}

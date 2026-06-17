@@ -3,6 +3,12 @@ Dashboard Operativo — Feedback Classifier
 Orquestador principal de la interfaz de Streamlit.
 Conexión directa a Supabase (ADR-007), sin pasar por FastAPI.
 """
+import sys
+from pathlib import Path
+
+# Permite `from dashboard...` al ejecutar con `streamlit run dashboard/main.py`
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import streamlit as st
 
 # ── Configuración general de la página ────────────────────────────────────────
@@ -14,7 +20,7 @@ st.set_page_config(
 )
 
 # ── Importar componentes DESPUÉS de set_page_config ───────────────────────────
-from dashboard.components import metricas, sentimiento, urgencia, patrones, copilot
+from dashboard.components import metricas, sentimiento, urgencia, patrones, copilot, carga_csv, exportar
 
 # ── CSS personalizado ──────────────────────────────────────────────────────────
 st.markdown(
@@ -52,6 +58,8 @@ with st.sidebar:
             "💬 Sentimiento y Categorías",
             "🚨 Alertas de Urgencia",
             "🔍 Patrones Detectados",
+            "📤 Exportar Datos",
+            "📁 Carga CSV",
             "🤖 Copilot",
         ],
         index=0,
@@ -83,6 +91,12 @@ elif seccion == "🚨 Alertas de Urgencia":
 
 elif seccion == "🔍 Patrones Detectados":
     patrones.render()
+
+elif seccion == "📤 Exportar Datos":
+    exportar.render()
+
+elif seccion == "📁 Carga CSV":
+    carga_csv.render()
 
 elif seccion == "🤖 Copilot":
     copilot.render()

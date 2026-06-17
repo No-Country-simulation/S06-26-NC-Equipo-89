@@ -1,0 +1,284 @@
+{
+  "name": "Feedback Ingest — 3 fuentes a FastAPI",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "google-forms",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Webhook Google Forms",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 200],
+      "webhookId": "google-forms-feedback-ingest",
+      "notes": "Sin OAuth. Conectar con Apps Script en el formulario (ver docs/n8n-google-forms-apps-script.md). URL producción: http://localhost:5679/webhook/google-forms"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "gf-01",
+              "name": "external_id",
+              "value": "={{ $json.body.id_mensaje || $json.body.response_id || $execution.id }}",
+              "type": "string"
+            },
+            {
+              "id": "gf-02",
+              "name": "fuente",
+              "value": "google_forms",
+              "type": "string"
+            },
+            {
+              "id": "gf-03",
+              "name": "texto",
+              "value": "={{ $json.body.mensaje || $json.body.texto || $json.body.text }}",
+              "type": "string"
+            },
+            {
+              "id": "gf-04",
+              "name": "timestamp",
+              "value": "={{ $json.body.timestamp || $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "gf-05",
+              "name": "metadata",
+              "value": "={{ { email: $json.body.email, source: 'google_forms_webhook' } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Set Formato API Google Forms",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [280, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 420],
+      "webhookId": "whatsapp-feedback-ingest"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "wa-01",
+              "name": "external_id",
+              "value": "={{ $json.body.id_mensaje || $json.body.message_id || $execution.id }}",
+              "type": "string"
+            },
+            {
+              "id": "wa-02",
+              "name": "fuente",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "wa-03",
+              "name": "texto",
+              "value": "={{ $json.body.mensaje || $json.body.text || $json.body.message }}",
+              "type": "string"
+            },
+            {
+              "id": "wa-04",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "wa-05",
+              "name": "metadata",
+              "value": "={{ { telefono: $json.body.telefono || $json.body.from, metadata_cliente: $json.body.metadata_cliente } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Set Formato API WhatsApp",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [280, 420]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tally",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Webhook Tally",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 640],
+      "webhookId": "tally-feedback-ingest"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ta-01",
+              "name": "external_id",
+              "value": "={{ $json.body.data.responseId || $json.body.responseId || $execution.id }}",
+              "type": "string"
+            },
+            {
+              "id": "ta-02",
+              "name": "fuente",
+              "value": "tally",
+              "type": "string"
+            },
+            {
+              "id": "ta-03",
+              "name": "texto",
+              "value": "={{ $json.body.data.fields.map(f => f.label + ': ' + f.value).join(' | ') || $json.body.mensaje }}",
+              "type": "string"
+            },
+            {
+              "id": "ta-04",
+              "name": "timestamp",
+              "value": "={{ $json.body.data.createdAt || $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "ta-05",
+              "name": "metadata",
+              "value": "={{ { form_id: $json.body.data.formId, respondent: $json.body.data.respondent } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "Set Formato API Tally",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [280, 640]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.FASTAPI_INGEST_URL || 'http://host.docker.internal:8000/ingest' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"external_id\": \"{{ $json.external_id }}\",\n  \"fuente\": \"{{ $json.fuente }}\",\n  \"texto\": \"{{ $json.texto }}\",\n  \"timestamp\": \"{{ $json.timestamp }}\",\n  \"metadata\": {{ JSON.stringify($json.metadata || {}) }}\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0007-4000-8000-000000000007",
+      "name": "POST a FastAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 420]
+    }
+  ],
+  "connections": {
+    "Webhook Google Forms": {
+      "main": [
+        [
+          {
+            "node": "Set Formato API Google Forms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Formato API Google Forms": {
+      "main": [
+        [
+          {
+            "node": "POST a FastAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Set Formato API WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Formato API WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "POST a FastAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Tally": {
+      "main": [
+        [
+          {
+            "node": "Set Formato API Tally",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Formato API Tally": {
+      "main": [
+        [
+          {
+            "node": "POST a FastAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
