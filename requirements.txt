@@ -1,0 +1,19 @@
+# API Framework
+fastapi>=0.111.0
+uvicorn>=0.30.0
+pydantic-settings>=2.3.0
+
+# Base de datos (Asíncrona)
+asyncpg>=0.29.0
+
+# Orquestación de IA y Agentes
+google-genai>=0.3.0
+langgraph>=0.1.0
+langchain-core>=0.2.0
+
+# Logging estructurado
+structlog>=24.2.0
+
+# Frontend (Dashboard)
+streamlit>=1.35.0
+supabase>=2.5.0
