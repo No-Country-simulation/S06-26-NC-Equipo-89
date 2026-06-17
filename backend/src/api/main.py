@@ -1,7 +1,7 @@
 import structlog
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from src.api.routes import ingest
+from src.api.routes import ingest, copilot
 from src.tools.supabase_client import db_client
 
 logger = structlog.get_logger()
@@ -24,6 +24,7 @@ app = FastAPI(
 )
 
 app.include_router(ingest.router, tags=["ingest"])
+app.include_router(copilot.router, prefix="/copilot", tags=["copilot"])
 
 @app.get("/health")
 async def health_check():

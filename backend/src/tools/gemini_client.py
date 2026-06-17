@@ -29,4 +29,21 @@ class GeminiClient:
             logger.error("gemini_call_failed", error=str(e))
             raise
 
+    async def generate_text(self, prompt: str, temperature: float = 0.3) -> str:
+        """Genera texto libre para respuestas del Copilot."""
+        try:
+            response = await self.client.aio.models.generate_content(
+                model="gemini-2.5-flash-lite",
+                contents=prompt,
+                config=genai.types.GenerateContentConfig(
+                    temperature=temperature,
+                ),
+            )
+            logger.info("gemini_text_success")
+            return response.text or ""
+        except Exception as e:
+            logger.error("gemini_text_failed", error=str(e))
+            raise
+
+
 gemini_client = GeminiClient()

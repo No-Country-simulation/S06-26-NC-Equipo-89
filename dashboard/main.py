@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # ── Importar componentes DESPUÉS de set_page_config ───────────────────────────
-from dashboard.components import metricas, sentimiento, urgencia, patrones
+from dashboard.components import metricas, sentimiento, urgencia, patrones, copilot
 
 # ── CSS personalizado ──────────────────────────────────────────────────────────
 st.markdown(
@@ -52,6 +52,7 @@ with st.sidebar:
             "💬 Sentimiento y Categorías",
             "🚨 Alertas de Urgencia",
             "🔍 Patrones Detectados",
+            "🤖 Copilot",
         ],
         index=0,
         key="nav_seccion",
@@ -82,3 +83,6 @@ elif seccion == "🚨 Alertas de Urgencia":
 
 elif seccion == "🔍 Patrones Detectados":
     patrones.render()
+
+elif seccion == "🤖 Copilot":
+    copilot.render()
