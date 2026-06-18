@@ -11,15 +11,13 @@ CSV manual ──► Streamlit ──► FastAPI /ingest/csv
                                       ▼
                                feedback_raw (Supabase)
                                       │
-                               worker.py (LangGraph)
+                               worker.py (LangGraph + embeddings Cohere)
                                       │
                     ┌─────────────────┼─────────────────┐
                     ▼                 ▼                 ▼
            feedback_clasificado  feedback_patrones  feedback_metricas
                     │
-              embed_job.py (Cohere)
-                    │
-              Copilot RAG (/copilot/ask)
+              Copilot RAG (/copilot/ask) — Gemini con fallback Groq
 ```
 
 ## Requisitos
@@ -27,12 +25,14 @@ CSV manual ──► Streamlit ──► FastAPI /ingest/csv
 - Python 3.12+
 - Docker (para n8n)
 - Cuenta Supabase, Gemini API, Cohere API
+- Groq API (opcional, fallback cuando Gemini devuelve 503/429)
 
 ## Configuración
 
 ```bash
 cp .env.example .env
 # Completar DB_DSN, SUPABASE_URL, SUPABASE_KEY, GEMINI_API_KEY, COHERE_API_KEY, API_KEY
+# Opcional: GROQ_API_KEY (fallback LLM)
 pip install -r requirements.txt
 ```
 
@@ -42,8 +42,10 @@ Variables clave en `.env`:
 |----------|-----|
 | `DB_DSN` | FastAPI + worker (Session pooler Supabase) |
 | `API_KEY` | Header `X-API-Key` para n8n y dashboard |
+| `GROQ_API_KEY` | Fallback LLM (clasificador, patrones, Copilot) |
 | `FASTAPI_INGEST_URL` | URL que usa n8n Docker → `http://host.docker.internal:8000/ingest` |
 | `FASTAPI_URL` | Dashboard/Copilot → `http://localhost:8000` |
+| `WEBHOOK_URL` | Base pública HTTPS para Meta/WhatsApp (ngrok en local) |
 
 Aplicar schema en Supabase SQL Editor:
 
@@ -78,11 +80,21 @@ cd backend
 docker compose up -d --no-deps n8n
 ```
 
-Abrir http://localhost:5679 → importar [`n8n/feedback-ingest.json`](n8n/feedback-ingest.json) → **activar workflow** (toggle ON).
+Abrir http://localhost:5679 → importar [`n8n/Feedback-Ingest-3-fuentes-a-FastAPI.json`](n8n/Feedback-Ingest-3-fuentes-a-FastAPI.json) → **activar workflow** (toggle ON) → reasignar credenciales Google/WhatsApp si hace falta.
 
-### Embeddings Copilot (manual o cron 3x/día)
+Recrear n8n tras cambiar `.env`:
 
 ```bash
+docker compose up -d n8n --no-deps --force-recreate
+```
+
+### Embeddings Copilot
+
+El **worker** indexa embeddings automáticamente tras cada tick. Para backfill manual:
+
+```bash
+cd backend && ../.venv/bin/python scripts/backfill_embeddings.py
+# o
 cd backend && ../.venv/bin/python embed_job.py
 ```
 
@@ -95,31 +107,35 @@ cd backend && ../.venv/bin/python embed_job.py
 | Dashboard | http://localhost:8501 |
 | n8n | http://localhost:5679 |
 
-## n8n — workflows y webhooks
+### Dashboard Streamlit (v3)
+
+Navegación multipágina: Vista General, Sentimiento, Urgencia, **Mensajes Clasificados** (resumen, confianza, idioma), Patrones, Exportar, Carga. Copilot IA en sidebar. Modo oscuro en sidebar.
+
+## n8n — workflows y fuentes
 
 | Archivo | Uso |
 |---------|-----|
-| [`n8n/feedback-ingest.json`](n8n/feedback-ingest.json) | Producción: WhatsApp, Tally, Google Forms |
+| [`n8n/Feedback-Ingest-3-fuentes-a-FastAPI.json`](n8n/Feedback-Ingest-3-fuentes-a-FastAPI.json) | Producción: WhatsApp Trigger, Tally webhook, Google Sheets (Forms) |
 | [`n8n/feedback-ingest-simple.json`](n8n/feedback-ingest-simple.json) | Prueba con un solo webhook |
 
 Tras importar y **activar** el workflow:
 
-| Fuente | Webhook (POST) |
-|--------|----------------|
-| WhatsApp | `http://localhost:5679/webhook/whatsapp` |
-| Tally | `http://localhost:5679/webhook/tally` |
-| Google Forms | `http://localhost:5679/webhook/google-forms` |
+| Fuente | Cómo llega a n8n |
+|--------|------------------|
+| **WhatsApp** | Nodo **WhatsApp Trigger** — callback Meta = `{WEBHOOK_URL}/webhook/{webhookId}/webhook` (Production URL del nodo) |
+| **Tally** | Webhook POST → `http://localhost:5679/webhook/tally` (o URL pública ngrok) |
+| **Google Forms** | **Google Sheets Trigger** (~1 min) — formulario vinculado a Sheet; OAuth Google en n8n |
 
-**Google Forms:** sin OAuth en n8n. Usar Apps Script en el formulario → ver [`docs/n8n-google-forms-apps-script.md`](docs/n8n-google-forms-apps-script.md).
+**Tally:** [`docs/n8n-tally-webhook.md`](docs/n8n-tally-webhook.md)
 
-**Tally:** webhook nativo en el formulario (Integrations → Webhooks) → ver [`docs/n8n-tally-webhook.md`](docs/n8n-tally-webhook.md).
+**Google Forms (alternativa sin OAuth):** [`docs/n8n-google-forms-apps-script.md`](docs/n8n-google-forms-apps-script.md)
 
 **Nodo POST a FastAPI** (compartido por las 3 fuentes):
 
 - URL: `http://host.docker.internal:8000/ingest` (o `={{ $env.FASTAPI_INGEST_URL }}`)
-- Header: `X-API-Key: token-secreto-n8n-12345` (valor de `API_KEY` en `.env`)
+- Header: `X-API-Key: ={{ $env.API_KEY }}` (desde `.env`; preview rojo de `$env` en n8n es normal al editar)
 
-WhatsApp y Tally **no requieren credenciales OAuth en n8n**; activar el workflow y registrar la URL del webhook en cada fuente (Tally: Integrations → Webhooks).
+WhatsApp requiere credencial **WhatsApp OAuth**; Google Sheets requiere **Google OAuth** en n8n.
 
 Checklist completo: [`docs/n8n-e2e-checklist.md`](docs/n8n-e2e-checklist.md)
 
@@ -132,18 +148,13 @@ curl -X POST http://localhost:8000/ingest \
   -H "X-API-Key: $API_KEY" \
   -d '{"external_id":"test-001","fuente":"manual","texto":"La app falla al pagar","timestamp":"2026-06-17T12:00:00Z","metadata":{}}'
 
-# 2. Webhook WhatsApp (workflow n8n activo)
-curl -X POST http://localhost:5679/webhook/whatsapp \
-  -H "Content-Type: application/json" \
-  -d '{"id_mensaje":"wa-001","mensaje":"Soporte muy lento"}'
-
-# 3. Webhook Tally
+# 2. Webhook Tally (workflow n8n activo)
 curl -X POST http://localhost:5679/webhook/tally \
   -H "Content-Type: application/json" \
-  -d '{"responseId":"tally-001","mensaje":"Problema con la facturación"}'
+  -d '{"eventType":"FORM_RESPONSE","data":{"responseId":"tally-001","fields":[{"label":"Comentario","value":"Soporte muy lento"}]}}'
 ```
 
-Verificar en Supabase:
+Verificar en Supabase y en el dashboard (**Mensajes Clasificados**):
 
 ```sql
 SELECT external_id, fuente, estado FROM feedback_raw ORDER BY created_at DESC;
@@ -165,6 +176,7 @@ Plantilla producción: [`.env.production.example`](.env.production.example)
 - Estado implementación: [`docs/estado-implementacion.md`](docs/estado-implementacion.md)
 - BI read-only: [`docs/bi-readonly-setup.md`](docs/bi-readonly-setup.md)
 - Checklist n8n: [`docs/n8n-e2e-checklist.md`](docs/n8n-e2e-checklist.md)
+- Plan dashboard v3: [`docs/plan-dashboard-ux-v3.md`](docs/plan-dashboard-ux-v3.md)
 - Google Forms + Apps Script: [`docs/n8n-google-forms-apps-script.md`](docs/n8n-google-forms-apps-script.md)
 
 ## Formato CSV para carga manual
