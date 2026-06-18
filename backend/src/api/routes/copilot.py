@@ -9,14 +9,15 @@ from fastapi.security import APIKeyHeader
 from src.core.config import settings
 from src.schemas.copilot import CopilotRequest, CopilotResponse, CopilotSource
 from src.tools.cohere_client import cohere_client
-from src.tools.gemini_client import gemini_client
+from src.tools.llm_client import generate_text
 from src.tools.supabase_client import get_db
 
 logger = structlog.get_logger()
 router = APIRouter()
 
 api_key_header = APIKeyHeader(name="X-API-Key")
-PROMPT_PATH = Path("prompts/copilot_v1.md")
+_ROOT = Path(__file__).resolve().parents[4]
+PROMPT_PATH = _ROOT / "prompts" / "copilot_v1.md"
 
 
 async def verify_api_key(api_key: str = Security(api_key_header)) -> str:
@@ -65,8 +66,10 @@ async def ask_copilot(
 ) -> CopilotResponse:
     """Responde preguntas del analista usando RAG sobre feedback indexado."""
     question = payload.question.strip()
-    since_days = payload.since_days or settings.copilot_default_since_days
-    since_date = datetime.now(timezone.utc) - timedelta(days=since_days)
+    # None = todo el feedback indexado; since_days opcional acota por fecha
+    since_date = None
+    if payload.since_days is not None:
+        since_date = datetime.now(timezone.utc) - timedelta(days=payload.since_days)
 
     try:
         query_embedding = await cohere_client.embed_query(question)
@@ -87,9 +90,9 @@ async def ask_copilot(
         if not rows:
             return CopilotResponse(
                 answer=(
-                    "No encontré feedback indexado para tu consulta en el período seleccionado. "
+                    "No encontré feedback indexado para tu consulta. "
                     "Es posible que el job de indexación aún no haya procesado los mensajes nuevos. "
-                    "Intenta ampliar el rango de días o espera a la próxima corrida de indexación."
+                    "Intenta de nuevo más tarde o verifica que existan embeddings en feedback_clasificado."
                 ),
                 sources=[],
             )
@@ -111,7 +114,7 @@ async def ask_copilot(
             contexto=_build_context([dict(r) for r in rows]),
             pregunta=question,
         )
-        answer = await gemini_client.generate_text(prompt)
+        answer = await generate_text(prompt)
 
         logger.info("copilot_ask_success", sources_count=len(sources))
         return CopilotResponse(answer=answer, sources=sources)

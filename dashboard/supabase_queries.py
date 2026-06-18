@@ -110,29 +110,72 @@ def get_top_categorias(top_n: int = 5) -> list[dict]:
 
 # ─── URGENCIA ──────────────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=30)
-def get_alertas_urgencia_alta(limit: int = 20) -> list[dict]:
-    """Últimos N mensajes con urgencia Alta, incluyendo texto original."""
+@st.cache_data(ttl=60)
+def get_urgencia_distribucion() -> list[dict]:
+    """Distribución Alta / Media / Baja para gráficos."""
     client = get_client()
-    res = (
+    res = client.table("feedback_clasificado").select("urgencia").execute()
+    conteo = {"Alta": 0, "Media": 0, "Baja": 0}
+    for row in res.data or []:
+        u = row.get("urgencia", "Baja")
+        if u in conteo:
+            conteo[u] += 1
+    return [{"urgencia": k, "cantidad": v} for k, v in conteo.items()]
+
+
+@st.cache_data(ttl=30)
+def get_mensajes_por_urgencia(urgencia: str | None = None, limit: int = 30) -> list[dict]:
+    """Mensajes clasificados filtrados por urgencia, con texto y metadatos."""
+    client = get_client()
+    query = (
         client.table("feedback_clasificado")
-        .select("external_id, urgencia, categorias, created_at, feedback_raw(fuente, texto, timestamp)")
-        .eq("urgencia", "Alta")
+        .select(
+            "external_id, sentimiento, urgencia, categorias, confianza, resumen, idioma, "
+            "created_at, feedback_raw(fuente, texto, timestamp)"
+        )
         .order("created_at", desc=True)
         .limit(limit)
-        .execute()
     )
+    if urgencia:
+        query = query.eq("urgencia", urgencia)
+    res = query.execute()
     rows = []
-    for item in (res.data or []):
+    for item in res.data or []:
         raw = item.get("feedback_raw") or {}
         rows.append({
             "external_id": item.get("external_id", ""),
             "fuente": raw.get("fuente", ""),
             "texto": raw.get("texto", ""),
-            "categorias": ", ".join(item.get("categorias", [])),
             "timestamp": raw.get("timestamp", ""),
+            "sentimiento": item.get("sentimiento", ""),
+            "urgencia": item.get("urgencia", ""),
+            "categorias": item.get("categorias", []),
+            "confianza": item.get("confianza"),
+            "resumen": item.get("resumen", ""),
+            "idioma": item.get("idioma", ""),
+            "clasificado_at": item.get("created_at", ""),
         })
     return rows
+
+
+@st.cache_data(ttl=30)
+def get_alertas_urgencia_alta(limit: int = 20) -> list[dict]:
+    """Últimos N mensajes con urgencia Alta, incluyendo texto original."""
+    rows = get_mensajes_por_urgencia(urgencia="Alta", limit=limit)
+    return [
+        {
+            "external_id": r["external_id"],
+            "fuente": r["fuente"],
+            "texto": r["texto"],
+            "categorias": ", ".join(r["categorias"]) if isinstance(r["categorias"], list) else r["categorias"],
+            "timestamp": r["timestamp"],
+            "resumen": r["resumen"],
+            "confianza": r["confianza"],
+            "idioma": r["idioma"],
+            "sentimiento": r["sentimiento"],
+        }
+        for r in rows
+    ]
 
 
 # ─── PATRONES ──────────────────────────────────────────────────────────────────
@@ -180,6 +223,48 @@ def get_clasificados_export() -> list[dict]:
             "clasificado_at": item.get("created_at", ""),
         })
     return rows
+
+
+@st.cache_data(ttl=30)
+def get_pending_count() -> int:
+    """Cantidad de mensajes en cola sin clasificar."""
+    client = get_client()
+    res = (
+        client.table("feedback_raw")
+        .select("id", count="exact")
+        .eq("estado", "pendiente")
+        .execute()
+    )
+    return res.count or 0
+
+
+@st.cache_data(ttl=60)
+def get_last_activity_at() -> str | None:
+    """Timestamp ISO del registro más reciente (raw o clasificado)."""
+    client = get_client()
+    raw_res = (
+        client.table("feedback_raw")
+        .select("created_at")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    clas_res = (
+        client.table("feedback_clasificado")
+        .select("created_at")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    timestamps: list[str] = []
+    if raw_res.data:
+        timestamps.append(raw_res.data[0].get("created_at", ""))
+    if clas_res.data:
+        timestamps.append(clas_res.data[0].get("created_at", ""))
+    timestamps = [t for t in timestamps if t]
+    if not timestamps:
+        return None
+    return max(timestamps)
 
 
 @st.cache_data(ttl=60)

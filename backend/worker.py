@@ -23,6 +23,13 @@ async def run_worker_loop():
             
             # Ejecutamos la máquina de estados de LangGraph de forma asíncrona
             final_state = await app.ainvoke(initial_state)
+
+            # Indexar embeddings de items recién clasificados (RAG Copilot)
+            from src.rag.embed_service import run_embed_indexing
+
+            indexed = await run_embed_indexing()
+            if indexed:
+                logger.info("worker_embed_indexed", count=indexed)
             
             logger.info("worker_tick_end")
             

@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     supabase_key: str = ""
     db_dsn: str = "postgresql://user:password@localhost:5432/db"  # asyncpg connection string
     gemini_api_key: str = ""
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
     cohere_api_key: str = ""
     api_key: str = "token-secreto-n8n-12345" # <-- Agregado para proteger FastAPI
     batch_size: int = 50

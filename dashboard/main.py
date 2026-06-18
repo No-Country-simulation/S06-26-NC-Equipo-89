@@ -1,102 +1,54 @@
 """
-Dashboard Operativo — Feedback Classifier
-Orquestador principal de la interfaz de Streamlit.
-Conexión directa a Supabase (ADR-007), sin pasar por FastAPI.
+Dashboard Operativo — Feedback Classifier v3
+Entry point multipágina con st.navigation.
 """
 import sys
 from pathlib import Path
 
-# Permite `from dashboard...` al ejecutar con `streamlit run dashboard/main.py`
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import streamlit as st
 
-# ── Configuración general de la página ────────────────────────────────────────
+from dashboard.components import copilot_fab
+from dashboard.layout import render_sidebar, setup
+from dashboard.views import carga, exportar, general, mensajes, patrones, sentimiento, urgencia
+from dashboard.theme import ASSETS_DIR, NAV_GROUPS
+
 st.set_page_config(
-    page_title="Feedback Classifier | Dashboard",
-    page_icon="📊",
+    page_title="Feedback Classifier",
+    page_icon=str(ASSETS_DIR / "logo.svg"),
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── Importar componentes DESPUÉS de set_page_config ───────────────────────────
-from dashboard.components import metricas, sentimiento, urgencia, patrones, copilot, carga_csv, exportar
+setup()
+render_sidebar()
 
-# ── CSS personalizado ──────────────────────────────────────────────────────────
-st.markdown(
-    """
-    <style>
-        [data-testid="stMetric"] {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 16px;
-        }
-        [data-testid="stMetricLabel"] { font-size: 0.82rem; color: #64748b; }
-        [data-testid="stMetricValue"] { font-size: 1.8rem; font-weight: 700; }
-        .block-container { padding-top: 2rem; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# ── Navegación multipágina agrupada ───────────────────────────────────────────
+_PAGE_MODULES = {
+    "general": general,
+    "sentimiento": sentimiento,
+    "urgencia": urgencia,
+    "mensajes": mensajes,
+    "patrones": patrones,
+    "exportar": exportar,
+    "carga": carga,
+}
 
-# ── Sidebar ────────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.image(
-        "https://raw.githubusercontent.com/No-Country-simulation/S06-26-NC-Equipo-89/main/README.md",
-        width=60,
-        use_container_width=False,
-    )
-    st.markdown("## 📊 Feedback Classifier")
-    st.markdown("Dashboard operativo de Customer Success")
-    st.divider()
+nav_pages: dict[str, list[st.Page]] = {}
+for group_name, items in NAV_GROUPS.items():
+    nav_pages[group_name] = [
+        st.Page(
+            _PAGE_MODULES[item["id"]].render,
+            title=item["label"],
+            icon=item["icon"],
+            url_path=item["url_path"],
+        )
+        for item in items
+    ]
 
-    seccion = st.radio(
-        "Navegar a:",
-        options=[
-            "🏠 Vista General",
-            "💬 Sentimiento y Categorías",
-            "🚨 Alertas de Urgencia",
-            "🔍 Patrones Detectados",
-            "📤 Exportar Datos",
-            "📁 Carga CSV",
-            "🤖 Copilot",
-        ],
-        index=0,
-        key="nav_seccion",
-    )
+pg = st.navigation(nav_pages, position="sidebar")
+pg.run()
 
-    st.divider()
-    if st.button("🔄 Refrescar datos", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
-
-    st.caption("Los datos se actualizan automáticamente cada 60 segundos.")
-
-# ── Encabezado principal ───────────────────────────────────────────────────────
-st.markdown("# 📊 Dashboard Operativo — Feedback Classifier")
-st.divider()
-
-# ── Renderizar sección activa ──────────────────────────────────────────────────
-if seccion == "🏠 Vista General":
-    metricas.render()
-    st.markdown("---")
-    sentimiento.render()
-
-elif seccion == "💬 Sentimiento y Categorías":
-    sentimiento.render()
-
-elif seccion == "🚨 Alertas de Urgencia":
-    urgencia.render()
-
-elif seccion == "🔍 Patrones Detectados":
-    patrones.render()
-
-elif seccion == "📤 Exportar Datos":
-    exportar.render()
-
-elif seccion == "📁 Carga CSV":
-    carga_csv.render()
-
-elif seccion == "🤖 Copilot":
-    copilot.render()
+# ── Modal Copilot (global) ────────────────────────────────────────────────────
+copilot_fab.open_dialog_if_needed()

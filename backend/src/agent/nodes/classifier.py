@@ -3,7 +3,7 @@ import structlog
 import json
 from pathlib import Path
 from src.agent.state import FeedbackState
-from src.tools.gemini_client import gemini_client
+from src.tools.llm_client import generate_json
 from src.schemas.results import FeedbackClassification
 from src.core.config import settings
 
@@ -23,7 +23,7 @@ async def classify_single(item: dict, template: str) -> dict:
         # Inyectar el texto real en el template
         prompt = template.format(texto=item['texto'])
         
-        result_json = await gemini_client.generate_json(
+        result_json = await generate_json(
             prompt=prompt, 
             schema=FeedbackClassification
         )

@@ -1,0 +1,120 @@
+"""
+Componente: Bandeja de mensajes clasificados.
+Muestra resumen, confianza, idioma y categorías (campos que antes solo estaban en export).
+"""
+from __future__ import annotations
+
+import pandas as pd
+import streamlit as st
+
+from dashboard.components.feedback_card import feedback_card_html
+from dashboard.components.ui import empty_state, section_header
+from dashboard.supabase_queries import get_clasificados_export
+
+
+def _format_fecha(value: str) -> str:
+    ts = pd.to_datetime(value, errors="coerce")
+    if pd.isna(ts):
+        return str(value or "—")
+    return ts.strftime("%d/%m/%Y %H:%M")
+
+
+def _apply_filters(df: pd.DataFrame) -> pd.DataFrame:
+    filtered = df.copy()
+
+    fuentes = sorted(filtered["fuente"].dropna().unique().tolist())
+    if fuentes:
+        sel = st.multiselect("Fuente", fuentes, default=fuentes, key="msg_fuente")
+        if sel:
+            filtered = filtered[filtered["fuente"].isin(sel)]
+
+    sentimientos = sorted(filtered["sentimiento"].dropna().unique().tolist())
+    if sentimientos:
+        sel = st.multiselect("Sentimiento", sentimientos, default=sentimientos, key="msg_sent")
+        if sel:
+            filtered = filtered[filtered["sentimiento"].isin(sel)]
+
+    urgencias = sorted(filtered["urgencia"].dropna().unique().tolist())
+    if urgencias:
+        sel = st.multiselect("Urgencia", urgencias, default=urgencias, key="msg_urg")
+        if sel:
+            filtered = filtered[filtered["urgencia"].isin(sel)]
+
+    idiomas = sorted(filtered["idioma"].dropna().unique().tolist())
+    if idiomas:
+        sel = st.multiselect("Idioma", idiomas, default=idiomas, key="msg_idioma")
+        if sel:
+            filtered = filtered[filtered["idioma"].isin(sel)]
+
+    if st.checkbox("Solo baja confianza (< 70%)", key="msg_low_conf"):
+        filtered = filtered[filtered["confianza"].fillna(0) < 0.7]
+
+    buscar = st.text_input("Buscar en texto o resumen", key="msg_search", placeholder="ej. precio, app...")
+    if buscar.strip():
+        q = buscar.strip().lower()
+        mask = (
+            filtered["texto"].fillna("").str.lower().str.contains(q, regex=False)
+            | filtered["resumen"].fillna("").str.lower().str.contains(q, regex=False)
+        )
+        filtered = filtered[mask]
+
+    return filtered
+
+
+def render() -> None:
+    section_header(
+        "Bandeja de clasificados",
+        "Cada tarjeta muestra lo que el agente extrajo: resumen, confianza, idioma y categorías.",
+    )
+
+    try:
+        rows = get_clasificados_export()
+    except EnvironmentError as e:
+        st.error(f"Error de configuración: {e}")
+        return
+    except Exception as e:
+        st.error(f"No se pudieron cargar los mensajes: {e}")
+        return
+
+    if not rows:
+        empty_state("Aún no hay feedback clasificado.")
+        return
+
+    df = pd.DataFrame(rows)
+    low_conf = int((df["confianza"].fillna(0) < 0.7).sum())
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Total clasificados", len(df))
+    m2.metric("Urgencia alta", int((df["urgencia"] == "Alta").sum()))
+    m3.metric("Sentimiento negativo", int((df["sentimiento"] == "Negativo").sum()))
+    m4.metric("Revisar (conf. < 70%)", low_conf, help="Clasificaciones que conviene validar manualmente")
+
+    st.markdown("---")
+    st.markdown("**Filtros**")
+    filtered = _apply_filters(df)
+    st.caption(f"Mostrando {len(filtered)} de {len(df)} mensajes")
+
+    if filtered.empty:
+        empty_state("Ningún mensaje coincide con los filtros.")
+        return
+
+    for _, row in filtered.iterrows():
+        cats = row.get("categorias", [])
+        if not isinstance(cats, list):
+            cats = [cats] if cats else []
+        fecha = _format_fecha(row.get("clasificado_at") or row.get("timestamp", ""))
+        st.markdown(
+            feedback_card_html(
+                external_id=str(row.get("external_id", "")),
+                fuente=str(row.get("fuente", "")),
+                sentimiento=str(row.get("sentimiento", "")),
+                urgencia=str(row.get("urgencia", "")),
+                confianza=row.get("confianza"),
+                idioma=str(row.get("idioma", "")),
+                resumen=str(row.get("resumen", "")),
+                texto=str(row.get("texto", "")),
+                categorias=cats,
+                fecha=fecha,
+            ),
+            unsafe_allow_html=True,
+        )

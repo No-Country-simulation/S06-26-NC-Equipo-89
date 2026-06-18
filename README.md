@@ -112,12 +112,14 @@ Tras importar y **activar** el workflow:
 
 **Google Forms:** sin OAuth en n8n. Usar Apps Script en el formulario → ver [`docs/n8n-google-forms-apps-script.md`](docs/n8n-google-forms-apps-script.md).
 
+**Tally:** webhook nativo en el formulario (Integrations → Webhooks) → ver [`docs/n8n-tally-webhook.md`](docs/n8n-tally-webhook.md).
+
 **Nodo POST a FastAPI** (compartido por las 3 fuentes):
 
 - URL: `http://host.docker.internal:8000/ingest` (o `={{ $env.FASTAPI_INGEST_URL }}`)
 - Header: `X-API-Key: token-secreto-n8n-12345` (valor de `API_KEY` en `.env`)
 
-WhatsApp y Tally **no requieren credenciales** en n8n; solo activar el workflow.
+WhatsApp y Tally **no requieren credenciales OAuth en n8n**; activar el workflow y registrar la URL del webhook en cada fuente (Tally: Integrations → Webhooks).
 
 Checklist completo: [`docs/n8n-e2e-checklist.md`](docs/n8n-e2e-checklist.md)
 

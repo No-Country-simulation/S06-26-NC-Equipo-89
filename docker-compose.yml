@@ -58,7 +58,7 @@ services:
       - N8N_HOST=localhost
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://localhost:5679/
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5679/}
       - GENERIC_TIMEZONE=America/Argentina/Buenos_Aires
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
       - N8N_EXPRESSIONS_ALLOWED_ENV_VARS=API_KEY,FASTAPI_INGEST_URL

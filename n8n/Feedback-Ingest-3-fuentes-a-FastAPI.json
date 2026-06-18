@@ -3,18 +3,43 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "google-forms",
-        "responseMode": "lastNode",
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "15mh9Ar28FkpGNz3yOY7WDlH84yTA-WBBXh1lsR2jtT8",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1971140809,
+          "mode": "list",
+          "cachedResultName": "Respuestas de formulario 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15mh9Ar28FkpGNz3yOY7WDlH84yTA-WBBXh1lsR2jtT8/edit#gid=1971140809"
+        },
+        "event": "rowAdded",
         "options": {}
       },
-      "id": "a1b2c3d4-0001-4000-8000-000000000001",
-      "name": "Webhook Google Forms",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [0, 200],
-      "webhookId": "google-forms-feedback-ingest",
-      "notes": "Sin OAuth. Conectar con Apps Script en el formulario (ver docs/n8n-google-forms-apps-script.md). URL producción: http://localhost:5679/webhook/google-forms"
+      "id": "051acaff-a39c-402a-a14d-7a53e3717cd6",
+      "name": "Google Sheets Trigger (Form Responses)",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        320
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "SYnC3gl7KxgOifXG",
+          "name": "Google Sheets Trigger account"
+        }
+      },
+      "notes": "Google Forms guarda respuestas en un Sheet. En el formulario: Respuestas → Vincular a Hojas de cálculo. Luego elegí ese Sheet acá. Credencial Google OAuth2 requerida."
     },
     {
       "parameters": {
@@ -23,7 +48,7 @@
             {
               "id": "gf-01",
               "name": "external_id",
-              "value": "={{ $json.body.id_mensaje || $json.body.response_id || $execution.id }}",
+              "value": "={{ 'gf-' + ($json.row_number || $execution.id) }}",
               "type": "string"
             },
             {
@@ -35,88 +60,80 @@
             {
               "id": "gf-03",
               "name": "texto",
-              "value": "={{ $json.body.mensaje || $json.body.texto || $json.body.text }}",
+              "value": "={{ $json['Comentario'] || $json.comentario || $json['¿Cuál es tu comentario?'] || Object.entries($json).filter(([k]) => !['row_number'].includes(k)).map(([k,v]) => k + ': ' + v).join(' | ') }}",
               "type": "string"
             },
             {
               "id": "gf-04",
               "name": "timestamp",
-              "value": "={{ $json.body.timestamp || $now.toISO() }}",
+              "value": "={{ $json['Marca temporal'] || $json.Timestamp || $now.toISO() }}",
               "type": "string"
             },
             {
               "id": "gf-05",
               "name": "metadata",
-              "value": "={{ { email: $json.body.email, source: 'google_forms_webhook' } }}",
+              "value": "={{ { sheet_row: $json.row_number, source: 'google_forms_sheet' } }}",
               "type": "object"
             }
           ]
         },
         "options": {}
       },
-      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "id": "d1af26d1-bf67-43cd-b612-6d99773549b7",
       "name": "Set Formato API Google Forms",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [280, 200]
-    },
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "whatsapp",
-        "responseMode": "lastNode",
-        "options": {}
-      },
-      "id": "a1b2c3d4-0003-4000-8000-000000000003",
-      "name": "Webhook WhatsApp",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [0, 420],
-      "webhookId": "whatsapp-feedback-ingest"
+      "position": [
+        1520,
+        320
+      ]
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "wa-01",
+              "id": "2a221817-e51f-48fd-9bb3-fef0f429fe4b",
               "name": "external_id",
-              "value": "={{ $json.body.id_mensaje || $json.body.message_id || $execution.id }}",
+              "value": "={{ $json.messages?.[0]?.id || $execution.id }}",
               "type": "string"
             },
             {
-              "id": "wa-02",
+              "id": "5e29255a-b46f-4055-9314-6d30bbafca54",
               "name": "fuente",
               "value": "whatsapp",
               "type": "string"
             },
             {
-              "id": "wa-03",
+              "id": "c5158204-f6df-4ad0-a642-5c8e22f85b8b",
               "name": "texto",
-              "value": "={{ $json.body.mensaje || $json.body.text || $json.body.message }}",
+              "value": "={{ $json.messages?.[0]?.text?.body }}",
               "type": "string"
             },
             {
-              "id": "wa-04",
+              "id": "5f9d1987-b2f2-4bce-9a90-ab621bea6478",
               "name": "timestamp",
               "value": "={{ $now.toISO() }}",
               "type": "string"
             },
             {
-              "id": "wa-05",
-              "name": "metadata",
-              "value": "={{ { telefono: $json.body.telefono || $json.body.from, metadata_cliente: $json.body.metadata_cliente } }}",
-              "type": "object"
+              "id": "d64b313b-df5d-49bc-b84a-dddf199b58b7",
+              "name": "metadata.telefono",
+              "value": "={{ $json.messages?.[0]?.from }}",
+              "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "id": "7a4c4920-a582-4a8a-af2c-99e7ef9c076c",
       "name": "Set Formato API WhatsApp",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [280, 420]
+      "position": [
+        1520,
+        544
+      ]
     },
     {
       "parameters": {
@@ -125,11 +142,14 @@
         "responseMode": "lastNode",
         "options": {}
       },
-      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "id": "3f187167-0ac8-410d-a15e-99aca7b0cfc4",
       "name": "Webhook Tally",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 640],
+      "position": [
+        1232,
+        768
+      ],
       "webhookId": "tally-feedback-ingest"
     },
     {
@@ -170,16 +190,19 @@
         },
         "options": {}
       },
-      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "id": "ff2e5974-d685-4a4d-97ec-ca5a5a37c53f",
       "name": "Set Formato API Tally",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [280, 640]
+      "position": [
+        1520,
+        768
+      ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.FASTAPI_INGEST_URL || 'http://host.docker.internal:8000/ingest' }}",
+        "url": "http://host.docker.internal:8000/ingest",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -195,18 +218,60 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"external_id\": \"{{ $json.external_id }}\",\n  \"fuente\": \"{{ $json.fuente }}\",\n  \"texto\": \"{{ $json.texto }}\",\n  \"timestamp\": \"{{ $json.timestamp }}\",\n  \"metadata\": {{ JSON.stringify($json.metadata || {}) }}\n}",
+        "jsonBody": "={{ JSON.stringify({\n  external_id: String($json.external_id || $execution.id),\n  fuente: $json.fuente || 'google_forms',\n  texto: String($json.texto || 'sin texto'),\n  timestamp: $now.toISO(),\n  metadata: $json.metadata || {}\n}) }}",
         "options": {}
       },
-      "id": "a1b2c3d4-0007-4000-8000-000000000007",
+      "id": "e75c7fd8-1841-486c-ad4d-46fb63cd3b59",
       "name": "POST a FastAPI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [600, 420]
+      "position": [
+        1840,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        544
+      ],
+      "id": "edf1fcbc-5738-4512-8b32-11eaa4060070",
+      "name": "WhatsApp Trigger",
+      "webhookId": "290d8c6f-8afd-40bb-8259-e3827d33467e",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "4dYpOd2G6WGDddon",
+          "name": "WhatsApp OAuth account"
+        }
+      }
     }
   ],
+  "pinData": {
+    "WhatsApp Trigger": [
+      {
+        "json": {
+          "name": "First item",
+          "code": 1
+        }
+      },
+      {
+        "json": {
+          "name": "Second item",
+          "code": 2
+        }
+      }
+    ]
+  },
   "connections": {
-    "Webhook Google Forms": {
+    "Google Sheets Trigger (Form Responses)": {
       "main": [
         [
           {
@@ -222,17 +287,6 @@
         [
           {
             "node": "POST a FastAPI",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Webhook WhatsApp": {
-      "main": [
-        [
-          {
-            "node": "Set Formato API WhatsApp",
             "type": "main",
             "index": 0
           }
@@ -271,14 +325,29 @@
           }
         ]
       ]
+    },
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Formato API WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
+  "versionId": "c3aed3df-b0e9-492a-8778-cbb4edfc2b65",
   "meta": {
-    "templateCredsSetupCompleted": false
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fa2a378a69bcfc1ceac318b2b324400494f43f8d2b01eb4a091ba7a9fe5e64e3"
   },
+  "id": "JbsFYlUitkg231KT",
   "tags": []
 }

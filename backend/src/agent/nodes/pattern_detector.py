@@ -4,7 +4,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import List
 from src.agent.state import FeedbackState
-from src.tools.gemini_client import gemini_client
+from src.tools.llm_client import generate_json
 
 logger = structlog.get_logger()
 
@@ -36,7 +36,7 @@ async def pattern_detector_node(state: FeedbackState) -> dict:
     prompt = template.format(datos=json.dumps(textos))
     
     try:
-        result_json = await gemini_client.generate_json(prompt=prompt, schema=PatternResult)
+        result_json = await generate_json(prompt=prompt, schema=PatternResult)
         result = json.loads(result_json)
         patterns = result.get("patrones", [])
         logger.info("pattern_detector_done", count=len(patterns))

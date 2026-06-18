@@ -35,12 +35,24 @@ curl -X POST http://localhost:5679/webhook/whatsapp \
   -d '{"id_mensaje":"wa-test-001","fuente":"whatsapp","mensaje":"El soporte tardó 3 días"}'
 ```
 
-### Tally
+### Tally (webhook nativo en Tally → n8n)
+
+Configuración en Tally: **Integrations → Webhooks** → URL pública `…/webhook/tally`. Guía: [`docs/n8n-tally-webhook.md`](n8n-tally-webhook.md).
 
 ```bash
 curl -X POST http://localhost:5679/webhook/tally \
   -H "Content-Type: application/json" \
-  -d '{"responseId":"tally-001","mensaje":"Problema con la facturación"}'
+  -d '{
+    "eventType": "FORM_RESPONSE",
+    "data": {
+      "responseId": "tally-001",
+      "formId": "FORM123",
+      "formName": "Encuesta",
+      "fields": [
+        {"label": "Comentario", "type": "TEXTAREA", "value": "Problema con la facturación"}
+      ]
+    }
+  }'
 ```
 
 ### Google Forms (webhook + Apps Script)

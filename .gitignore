@@ -36,5 +36,6 @@ htmlcov/
 tmp/
 temp/
 
-# Docker / n8n datos locales (volumen nombrado en compose)
+# Docker / n8n datos locales (volumen nombrado en compose; credenciales OAuth viven aquí)
 n8n_data/
+n8n/.env

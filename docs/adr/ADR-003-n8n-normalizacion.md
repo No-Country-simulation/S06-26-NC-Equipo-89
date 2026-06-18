@@ -30,3 +30,4 @@ Feedback de tres fuentes externas (WhatsApp, Tally, Google Forms) más carga man
 - [`n8n/feedback-ingest-simple.json`](../../n8n/feedback-ingest-simple.json) — prueba con un webhook
 - [`docker-compose.yml`](../../docker-compose.yml) (n8n local puerto 5679)
 - Google Forms: webhook + Apps Script ([`docs/n8n-google-forms-apps-script.md`](../n8n-google-forms-apps-script.md)), sin OAuth en n8n
+- Tally: webhook nativo del formulario → n8n ([`docs/n8n-tally-webhook.md`](../n8n-tally-webhook.md))
