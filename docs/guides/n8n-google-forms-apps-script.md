@@ -1,19 +1,22 @@
-# Google Forms → n8n (sin OAuth)
+# Google Forms → n8n (alternativa sin OAuth)
 
-El nodo Google Sheets/Forms Trigger requiere OAuth en Google Cloud y suele fallar en local (`Unable to sign without access token`).
+> **Nota:** El workflow de producción [`Feedback-Ingest-3-fuentes-a-FastAPI.json`](../../n8n/Feedback-Ingest-3-fuentes-a-FastAPI.json) usa **Google Sheets Trigger** (OAuth Google en n8n).  
+> Esta guía es una **alternativa** si OAuth falla en local o preferís Apps Script.
 
-**Alternativa:** Apps Script en el formulario envía un POST al webhook de n8n (igual que WhatsApp).
+El nodo Google Sheets Trigger requiere OAuth en Google Cloud y a veces falla en local (`Unable to sign without access token`).
 
-## 1. Reimportar workflow
+**Alternativa:** Apps Script en el formulario envía un POST a un webhook de n8n.
 
-Importá `n8n/feedback-ingest.json` y activá el workflow.
+## Opción A — Workflow simple con webhook Forms
 
-Webhook Google Forms:
+Importá [`n8n/feedback-ingest-simple.json`](../../n8n/feedback-ingest-simple.json) o añadí un nodo **Webhook** con path `google-forms` al workflow activo.
+
+Webhook local:
 ```
 POST http://localhost:5679/webhook/google-forms
 ```
 
-## 2. Probar sin Google (curl local)
+## Probar sin Google (curl local)
 
 ```bash
 curl -X POST http://localhost:5679/webhook/google-forms \
@@ -27,7 +30,7 @@ curl -X POST http://localhost:5679/webhook/google-forms \
 
 Verificá en Supabase: `feedback_raw` con `fuente = google_forms`.
 
-## 3. Apps Script en tu formulario
+## Apps Script en tu formulario
 
 1. Abrí el formulario en Google Forms
 2. **⋮ → Editor de secuencias de comandos** (Apps Script)
@@ -64,20 +67,21 @@ function onFormSubmit(e) {
    - Tipo: **Al enviar el formulario**
 5. Autorizá el script cuando Google lo pida
 
-## 4. URL pública (importante)
+## URL pública (importante)
 
 Google **no puede** llamar a `http://localhost:5679` desde sus servidores.
 
-Opciones:
-
 | Entorno | URL del webhook |
 |---------|-----------------|
-| Local con túnel (ngrok, cloudflared) | `https://xxxx.ngrok.io/webhook/google-forms` |
-| n8n Cloud / servidor con dominio | `https://tu-dominio.com/webhook/google-forms` |
-| Docker en servidor | URL pública del puerto 5679 |
+| Local con túnel (ngrok) | `https://xxxx.ngrok.io/webhook/google-forms` |
+| n8n Cloud / servidor | `https://tu-dominio.com/webhook/google-forms` |
 
 Actualizá `N8N_WEBHOOK_URL` en el script con esa URL.
 
-## 5. El Sheet vinculado sigue sirviendo
+## Opción B — Google Sheets Trigger (recomendado en producción)
 
-El formulario puede seguir guardando respuestas en el Sheet para backup/BI. El webhook es **adicional** para disparar n8n en tiempo real.
+Ver [ADR-003](../adr/ADR-003-n8n-normalizacion.md) y [checklist E2E](n8n-e2e-checklist.md).
+
+## El Sheet vinculado sigue sirviendo
+
+El formulario puede seguir guardando respuestas en el Sheet para backup/BI. El webhook Apps Script es **adicional** para disparar n8n en tiempo real.

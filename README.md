@@ -2,6 +2,8 @@
 
 Sistema de clasificación automática de feedback de clientes con LangGraph, FastAPI, Supabase, n8n y dashboard Streamlit.
 
+**Documentación:** [docs/](docs/README.md) · **ADRs:** [decisiones de arquitectura](docs/adr/README.md) · **Estado:** [implementación](docs/estado-implementacion.md)
+
 ## Arquitectura
 
 ```
@@ -49,8 +51,8 @@ Variables clave en `.env`:
 
 Aplicar schema en Supabase SQL Editor:
 
-1. [`docs/supabase_schema.sql`](docs/supabase_schema.sql) (schema completo)
-2. Si ya tenías tablas creadas: [`docs/migrations/006_schema_hardening.sql`](docs/migrations/006_schema_hardening.sql)
+1. [`docs/database/supabase_schema.sql`](docs/database/supabase_schema.sql) (schema completo)
+2. Si ya tenías tablas creadas: [`docs/database/migrations/006_schema_hardening.sql`](docs/database/migrations/006_schema_hardening.sql)
 
 ## Levantar en local
 
@@ -126,9 +128,9 @@ Tras importar y **activar** el workflow:
 | **Tally** | Webhook POST → `http://localhost:5679/webhook/tally` (o URL pública ngrok) |
 | **Google Forms** | **Google Sheets Trigger** (~1 min) — formulario vinculado a Sheet; OAuth Google en n8n |
 
-**Tally:** [`docs/n8n-tally-webhook.md`](docs/n8n-tally-webhook.md)
+**Tally:** [`docs/guides/n8n-tally-webhook.md`](docs/guides/n8n-tally-webhook.md)
 
-**Google Forms (alternativa sin OAuth):** [`docs/n8n-google-forms-apps-script.md`](docs/n8n-google-forms-apps-script.md)
+**Google Forms (alternativa sin OAuth):** [`docs/guides/n8n-google-forms-apps-script.md`](docs/guides/n8n-google-forms-apps-script.md)
 
 **Nodo POST a FastAPI** (compartido por las 3 fuentes):
 
@@ -137,7 +139,7 @@ Tras importar y **activar** el workflow:
 
 WhatsApp requiere credencial **WhatsApp OAuth**; Google Sheets requiere **Google OAuth** en n8n.
 
-Checklist completo: [`docs/n8n-e2e-checklist.md`](docs/n8n-e2e-checklist.md)
+Checklist completo: [`docs/guides/n8n-e2e-checklist.md`](docs/guides/n8n-e2e-checklist.md)
 
 ## Prueba E2E rápida
 
@@ -172,12 +174,28 @@ Plantilla producción: [`.env.production.example`](.env.production.example)
 
 ## Documentación
 
-- ADRs: [`docs/adr/`](docs/adr/)
-- Estado implementación: [`docs/estado-implementacion.md`](docs/estado-implementacion.md)
-- BI read-only: [`docs/bi-readonly-setup.md`](docs/bi-readonly-setup.md)
-- Checklist n8n: [`docs/n8n-e2e-checklist.md`](docs/n8n-e2e-checklist.md)
-- Plan dashboard v3: [`docs/plan-dashboard-ux-v3.md`](docs/plan-dashboard-ux-v3.md)
-- Google Forms + Apps Script: [`docs/n8n-google-forms-apps-script.md`](docs/n8n-google-forms-apps-script.md)
+Documentación completa en [`docs/`](docs/README.md). Punto de entrada según tu rol:
+
+| Rol | Empezar por |
+|-----|-------------|
+| **Evaluador / revisor** | [Estado de implementación](docs/estado-implementacion.md) → [ADRs](docs/adr/README.md) |
+| **Desarrollador** | [README](README.md) (instalación) → [Schema DB](docs/database/supabase_schema.sql) |
+| **Operador (n8n)** | [Checklist E2E](docs/guides/n8n-e2e-checklist.md) |
+
+### Decisiones de arquitectura (ADR)
+
+El diseño del sistema está documentado en [Architecture Decision Records](docs/adr/README.md):
+
+- LLM y clasificación (Gemini + Groq)
+- Pipeline LangGraph
+- Ingestión n8n (WhatsApp, Tally, Google Forms)
+- Supabase + RAG Copilot
+- Dashboard Streamlit v3
+
+### Más recursos
+
+- [Guías operativas](docs/guides/) — n8n, Tally, Forms, BI
+- [Base de datos](docs/database/) — schema y migraciones
 
 ## Formato CSV para carga manual
 
@@ -202,6 +220,6 @@ backend/src/     # FastAPI, LangGraph, RAG
 dashboard/       # Streamlit
 n8n/             # Workflows exportados
 prompts/         # Prompts Gemini
-docs/            # Schema, ADRs, migraciones
+docs/            # Índice en docs/README.md
 tests/           # Suite pytest
 ```

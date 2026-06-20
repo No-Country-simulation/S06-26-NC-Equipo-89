@@ -1,6 +1,9 @@
-# Estado de implementación vs plan original
+# Estado de implementación
 
 Última actualización: junio 2026
+
+Este documento resume el **estado actual del producto** respecto al plan original.  
+Para decisiones de diseño, ver [ADRs](adr/README.md). Para navegar toda la documentación, ver [docs/README.md](README.md).
 
 ## Resumen
 
@@ -17,7 +20,8 @@
 | Export dashboard | Completo |
 | Tests unitarios | Completo |
 | Docker full stack | Completo |
-| BI read-only | Documentado |
+| BI read-only | Documentado (`guides/bi-readonly-setup.md`) |
+| Índice docs | Completo (`README.md`) |
 
 ## Matriz ADR
 

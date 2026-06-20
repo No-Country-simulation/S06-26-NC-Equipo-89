@@ -19,5 +19,6 @@ Supabase (PostgreSQL + JSONB + pgvector) para texto crudo, datos estructurados y
 
 ## Implementación
 
-- [`docs/supabase_schema.sql`](../supabase_schema.sql)
-- [`docs/migrations/`](../migrations/)
+- [`docs/database/supabase_schema.sql`](../database/supabase_schema.sql)
+- [`docs/database/migrations/`](../database/migrations/)
+- Embeddings: worker (`run_embed_indexing`) + [`backend/scripts/backfill_embeddings.py`](../../backend/scripts/backfill_embeddings.py)

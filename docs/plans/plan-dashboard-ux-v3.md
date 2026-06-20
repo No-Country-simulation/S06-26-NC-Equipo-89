@@ -1,5 +1,9 @@
 # Plan de implementación — UI/UX Dashboard v3
 
+> **Estado: IMPLEMENTADO** (junio 2026).  
+> El código vivo está en `dashboard/`. Este documento es referencia histórica del diseño.  
+> Índice de docs: [`docs/README.md`](../README.md)
+
 **Fecha:** junio 2026  
 **Alcance:** mejorar experiencia visual, navegación, Copilot y feedback al usuario  
 **Dominio:** `dashboard/` · sin cambios de backend salvo mensajes de estado opcionales
@@ -291,6 +295,6 @@ flowchart TD
 
 ## Referencias en repo
 
-- Plan v2 (base implementada): [`docs/plan-dashboard-streamlit-v2.md`](plan-dashboard-streamlit-v2.md)
+- Plan v2 (base implementada): [`plan-dashboard-streamlit-v2.md`](plan-dashboard-streamlit-v2.md)
 - ADR dashboard: [`docs/adr/ADR-007-streamlit-dashboard.md`](adr/ADR-007-streamlit-dashboard.md)
 - Código: [`dashboard/`](../dashboard/)

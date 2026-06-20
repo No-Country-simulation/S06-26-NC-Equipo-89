@@ -8,18 +8,21 @@
 
 **Streamlit** para CS Managers. **BI** (Power BI, Metabase) conecta directo a Supabase PostgreSQL.
 
-## Streamlit muestra
+## Streamlit muestra (v3 — implementado)
 
-- Distribución sentimiento y categorías
-- Alertas urgencia alta
+- Vista General (KPIs, sentimiento)
+- Sentimiento y categorías (gráficos)
+- Urgencia (distribución Alta/Media/Baja + mensajes)
+- **Mensajes clasificados** (resumen, confianza, idioma, categorías)
 - Patrones detectados
-- Carga CSV manual
-- Export CSV/JSON
-- Copilot RAG (vía FastAPI, ADR-008)
+- Export CSV/JSON con filtros
+- Carga CSV/JSON/Excel
+- Copilot RAG (modal sidebar, ADR-008)
+- Modo oscuro, health banner, status bar
 
 ## BI
 
-- Credenciales read-only (ver [`docs/bi-readonly-setup.md`](../bi-readonly-setup.md))
+- Credenciales read-only (ver [`docs/guides/bi-readonly-setup.md`](../guides/bi-readonly-setup.md))
 - Tablas: `feedback_clasificado`, `feedback_patrones`, `feedback_metricas`
 
 ## Implementación

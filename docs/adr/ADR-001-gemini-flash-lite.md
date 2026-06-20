@@ -15,4 +15,7 @@ Elegimos **Gemini Flash-Lite** porque supera a BERT/RoBERTa en texto corto e inf
 ## Implementación
 
 - [`backend/src/tools/gemini_client.py`](../../backend/src/tools/gemini_client.py)
+- [`backend/src/tools/llm_client.py`](../../backend/src/tools/llm_client.py) — router Gemini → **Groq** (503/429)
+- [`backend/src/tools/groq_client.py`](../../backend/src/tools/groq_client.py)
 - [`backend/src/agent/nodes/classifier.py`](../../backend/src/agent/nodes/classifier.py)
+- [`prompts/classification_v1.md`](../../prompts/classification_v1.md)

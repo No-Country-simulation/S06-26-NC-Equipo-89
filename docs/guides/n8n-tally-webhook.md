@@ -137,4 +137,4 @@ Documentación oficial: [Tally Webhooks](https://tally.so/help/webhooks)
 | No llega a Supabase | API_KEY incorrecta | Header `X-API-Key` en nodo POST a FastAPI = `API_KEY` del `.env` |
 | localhost en Tally | Tally no alcanza tu PC | Usar túnel HTTPS (ngrok/cloudflared) y `WEBHOOK_URL` |
 
-Checklist completo: [`docs/n8n-e2e-checklist.md`](n8n-e2e-checklist.md)
+Checklist completo: [n8n-e2e-checklist.md](n8n-e2e-checklist.md)

@@ -1,5 +1,8 @@
 # Plan de implementación — Dashboard Streamlit v2
 
+> **Estado: SUPERSEDED** — reemplazado por [plan-dashboard-ux-v3.md](plan-dashboard-ux-v3.md) (implementado).  
+> Conservado como referencia histórica.
+
 **Fecha:** junio 2026  
 **Alcance:** carga multi-formato, Copilot flotante, design system visual  
 **Dominio:** `dashboard/` (Frontend Agent) · opcional `backend/src/api/routes/ingest.py`

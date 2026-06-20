@@ -4,7 +4,7 @@
 
 - [ ] FastAPI en `0.0.0.0:8000` (`/health` OK)
 - [ ] `docker compose up -d --no-deps n8n` (puerto **5679**)
-- [ ] Workflow importado desde [`n8n/Feedback-Ingest-3-fuentes-a-FastAPI.json`](../n8n/Feedback-Ingest-3-fuentes-a-FastAPI.json)
+- [ ] Workflow importado desde [`n8n/Feedback-Ingest-3-fuentes-a-FastAPI.json`](../../n8n/Feedback-Ingest-3-fuentes-a-FastAPI.json)
 - [ ] Workflow **activo** (toggle ON) — sin esto los webhooks devuelven 404
 - [ ] `worker.py` corriendo
 - [ ] Variables en `.env`: `API_KEY`, `FASTAPI_INGEST_URL`, `GROQ_API_KEY` (recomendado)
@@ -43,7 +43,7 @@ Usa el nodo **WhatsApp Trigger** (no `/webhook/whatsapp` genérico).
 
 ### Tally (webhook nativo en Tally → n8n)
 
-Configuración en Tally: **Integrations → Webhooks** → URL `…/webhook/tally`. Guía: [`docs/n8n-tally-webhook.md`](n8n-tally-webhook.md).
+Configuración en Tally: **Integrations → Webhooks** → URL `…/webhook/tally`. Guía: [n8n-tally-webhook.md](n8n-tally-webhook.md).
 
 ```bash
 curl -X POST http://localhost:5679/webhook/tally \
@@ -65,7 +65,7 @@ curl -X POST http://localhost:5679/webhook/tally \
 
 El workflow actual usa **Google Sheets Trigger** (poll ~1 min): formulario vinculado a Sheet + OAuth Google en n8n.
 
-Alternativa sin OAuth: Apps Script → [`docs/n8n-google-forms-apps-script.md`](n8n-google-forms-apps-script.md).
+Alternativa sin OAuth: Apps Script → [n8n-google-forms-apps-script.md](n8n-google-forms-apps-script.md).
 
 ## Verificación Supabase y dashboard
 
