@@ -28,6 +28,10 @@ Para decisiones de diseño, ver [ADRs](adr/README.md). Para navegar toda la docu
 | BI read-only | Documentado (`guides/bi-readonly-setup.md`) |
 | Guía seguridad / secretos | Completo (`guides/seguridad-y-secretos.md`) |
 | Índice docs | Completo (`README.md`) |
+| **Producción single-tenant** | Completo (migración 007, recovery, tick_id, CI, docker prod) |
+| Runbook producción | Completo (`guides/runbook-produccion.md`) |
+| Proxy auth dashboard | Documentado (`guides/dashboard-proxy-auth.md`) |
+| CI GitHub Actions | Completo (`.github/workflows/ci.yml`) |
 
 ## Matriz ADR
 
@@ -53,10 +57,25 @@ Para decisiones de diseño, ver [ADRs](adr/README.md). Para navegar toda la docu
 
 ## Pendiente (Later)
 
-- Multi-tenant + RLS (demo actual: single-tenant, sin policies)
+- Multi-tenant + RLS (producción actual: single-tenant, sin policies)
 - Alertas automáticas urgencia alta (email/Slack)
 - LangChain para Copilot (se usó RAG directo)
 - API LLM centralizada (escala futura)
+
+## Producción single-tenant
+
+| Ítem | Estado |
+|------|--------|
+| Migración 007 (CHECK, tick_id, índices) | OK |
+| Recovery `procesando` (worker + script) | OK |
+| `tick_id` en persister + dashboard | OK |
+| Dashboard read-only (`DASHBOARD_READONLY`) | OK |
+| API hardening (rate limit, CORS, `/health/deep`) | OK |
+| CI (ruff + pytest + gitleaks) | OK |
+| `docker-compose.prod.yml` | OK |
+| Runbook | OK |
+
+Checklist go-live: [README.md](../README.md#checklist-go-live) · Plan: [plans/plan-produccion-single-tenant.md](plans/plan-produccion-single-tenant.md)
 
 ## Operación LLM
 
@@ -79,9 +98,11 @@ Documentación: [plans/optimizacion-llm-fase-a.md](plans/optimizacion-llm-fase-a
 | Tema | Estado demo | Producción |
 |------|-------------|------------|
 | `.env` en Git | Ignorado (`.gitignore`) | Secrets manager |
-| `API_KEY` en código | Default vacío | `openssl rand -hex 32` |
-| Supabase dashboard | `service_role` | `anon` + RLS |
+| `API_KEY` en código | Default vacío | ≥32 chars + `ENV=production` |
+| Supabase dashboard | `service_role` | `dashboard_readonly` + flag |
 | Workflows n8n | `$env.API_KEY` | Sin claves en JSON |
 | Datasets locales | `Data/` gitignored | — |
+| CI | — | ruff + pytest + gitleaks |
+| Dashboard expuesto | `:8501` público | Proxy TLS + Basic Auth |
 
-Guía: [guides/seguridad-y-secretos.md](guides/seguridad-y-secretos.md)
+Guía: [guides/seguridad-y-secretos.md](guides/seguridad-y-secretos.md) · [runbook-produccion.md](guides/runbook-produccion.md)

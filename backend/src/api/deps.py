@@ -1,9 +1,10 @@
 """Dependencias compartidas de rutas FastAPI."""
 
 import structlog
-from fastapi import HTTPException, Security, status
+from fastapi import HTTPException, Request, Security, status
 from fastapi.security import APIKeyHeader
 
+from src.api.rate_limit import check_rate_limit
 from src.core.config import settings
 
 logger = structlog.get_logger()
@@ -19,3 +20,11 @@ async def verify_api_key(api_key: str = Security(api_key_header)) -> str:
             detail="Invalid API Key",
         )
     return api_key
+
+
+async def rate_limit_ingest(request: Request) -> None:
+    check_rate_limit(request, "ingest", settings.rate_limit_ingest_per_minute)
+
+
+async def rate_limit_copilot(request: Request) -> None:
+    check_rate_limit(request, "copilot", settings.rate_limit_copilot_per_minute)

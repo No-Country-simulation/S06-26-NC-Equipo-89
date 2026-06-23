@@ -151,3 +151,25 @@ def test_sample_csv_template():
     content = sample_csv_template().decode()
     assert "texto" in content
     assert "ejemplo-001" in content
+
+
+@patch("dashboard.supabase_queries.get_latest_tick_id", return_value="tick-abc")
+@patch("dashboard.supabase_queries.get_client")
+def test_get_patrones_filters_by_latest_tick(mock_get_client, _mock_tick):
+    from dashboard.supabase_queries import get_patrones
+
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+
+    patrones_res = MagicMock()
+    patrones_res.data = [{"descripcion": "Demoras", "tick_id": "tick-abc"}]
+
+    select_chain = mock_client.table.return_value.select.return_value
+    order_chain = select_chain.order.return_value
+    eq_chain = order_chain.eq.return_value
+    eq_chain.execute.return_value = patrones_res
+
+    get_patrones.clear()
+    result = get_patrones(latest_tick_only=True)
+    assert len(result) == 1
+    order_chain.eq.assert_called_with("tick_id", "tick-abc")

@@ -1,0 +1,85 @@
+# Producción single-tenant — usar con archivo .env externo (permisos 600)
+#   docker compose -f docker-compose.prod.yml --env-file /path/to/.env up -d
+#
+# Dashboard: sin puerto público; acceder vía reverse proxy (ver docs/guides/dashboard-proxy-auth.md)
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: feedback-classifier-api:${IMAGE_TAG:-latest}
+    container_name: feedback-classifier-api
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app/backend:/app
+      - ENV=production
+    working_dir: /app/backend
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/deep', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: feedback-classifier-worker:${IMAGE_TAG:-latest}
+    container_name: feedback-classifier-worker
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app/backend:/app
+      - ENV=production
+    working_dir: /app/backend
+    command: python worker.py
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "assert b'worker' in open('/proc/1/cmdline','rb').read()",
+        ]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    image: feedback-classifier-dashboard:${IMAGE_TAG:-latest}
+    container_name: feedback-classifier-dashboard
+    restart: always
+    expose:
+      - "8501"
+    env_file:
+      - .env
+    environment:
+      - FASTAPI_URL=http://api:8000
+      - ENV=production
+      - DASHBOARD_READONLY=true
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes: {}

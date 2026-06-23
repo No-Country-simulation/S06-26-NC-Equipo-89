@@ -19,7 +19,6 @@
 
 Sistema de clasificación automática de feedback de clientes con LangGraph, FastAPI, Supabase, n8n y dashboard Streamlit.
 
-
 ## Arquitectura
 
 <p align="center">
@@ -250,7 +249,35 @@ Si mensajes quedan en estado `error` (p. ej. rate limit 429 de Gemini/Groq):
 cd backend && python scripts/requeue_errors.py
 ```
 
+Si quedan atascados en `procesando` (worker crasheado):
+
+```bash
+cd backend && python scripts/recover_stuck_processing.py
+```
+
 Revisa los logs del worker tras reencolar. El dashboard muestra el conteo en la barra de estado y el banner de salud.
+
+## Producción (single-tenant)
+
+**¿Seguís en local?** No necesitás nada de esta sección — ver [docs/guides/entornos-dev-y-prod.md](docs/guides/entornos-dev-y-prod.md).
+
+Plantilla: [`.env.production.example`](.env.production.example) · Plan: [docs/plans/plan-produccion-single-tenant.md](docs/plans/plan-produccion-single-tenant.md)
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file /path/to/.env up -d
+```
+
+### Checklist go-live
+
+1. Migración `007_production_hardening.sql` aplicada en Supabase prod
+2. `API_KEY` rotada (`openssl rand -hex 32`) y `ENV=production`
+3. Dashboard con rol `dashboard_readonly` + `DASHBOARD_READONLY=true`
+4. Proxy TLS + Basic Auth delante del dashboard ([guía](docs/guides/dashboard-proxy-auth.md))
+5. CI verde en `main` (ruff + pytest + gitleaks)
+6. Worker + `recover_stuck_processing.py` probados con lote de 50 mensajes
+7. n8n activo con `WEBHOOK_URL` HTTPS de producción
+8. Backup Supabase verificado
+9. Equipo conoce [runbook](docs/guides/runbook-produccion.md)
 
 ## Seguridad
 
@@ -275,4 +302,6 @@ n8n/             # Workflows exportados (sin API keys embebidas)
 prompts/         # Prompts LLM (system, few-shot, patrones)
 docs/            # Índice en docs/README.md
 tests/           # Suite pytest (55+ tests)
+.github/         # CI: ruff + pytest + gitleaks
+docker-compose.prod.yml  # Despliegue producción
 ```

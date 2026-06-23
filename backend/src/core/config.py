@@ -1,11 +1,15 @@
 from pathlib import Path
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
 _BACKEND_ENV = Path(__file__).resolve().parents[2] / ".env"
 
+
 class Settings(BaseSettings):
-    db_dsn: str = "postgresql://user:password@localhost:5432/db"  # asyncpg connection string
+    env: str = "development"
+    db_dsn: str = "postgresql://user:password@localhost:5432/db"
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.5-flash-lite"
     gemini_cache_enabled: bool = True
@@ -15,6 +19,7 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.3-70b-versatile"
     cohere_api_key: str = ""
     api_key: str = ""
+    min_api_key_length: int = 32
     batch_size: int = 50
     gemini_concurrency: int = 3
     max_retries: int = 4
@@ -27,10 +32,36 @@ class Settings(BaseSettings):
     embed_max_per_run: int = 500
     embed_job_sleep_seconds: int = 2
     copilot_match_count: int = 10
+    stuck_processing_minutes: int = 30
+    cors_origins: str = ""
+    rate_limit_ingest_per_minute: int = 60
+    rate_limit_copilot_per_minute: int = 30
+    log_pii: bool = True
 
     model_config = SettingsConfigDict(
         env_file=(str(_ROOT_ENV), str(_BACKEND_ENV), ".env"),
         extra="ignore",
     )
+
+    @property
+    def is_production(self) -> bool:
+        return self.env.lower() == "production"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        if not self.cors_origins.strip():
+            return []
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if self.is_production:
+            if len(self.api_key) < self.min_api_key_length:
+                raise ValueError(
+                    f"API_KEY debe tener al menos {self.min_api_key_length} caracteres en producción"
+                )
+            self.log_pii = False
+        return self
+
 
 settings = Settings()

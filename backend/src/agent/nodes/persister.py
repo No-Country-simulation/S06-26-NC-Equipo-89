@@ -1,8 +1,11 @@
-import structlog
 import json
+import uuid
+
+import structlog
+
 from src.agent.state import FeedbackState
-from src.tools.supabase_client import get_db
 from src.core.config import settings
+from src.tools.supabase_client import get_db
 
 logger = structlog.get_logger()
 
@@ -17,6 +20,7 @@ async def persister_node(state: FeedbackState) -> dict:
     if not batch:
         return {}
 
+    tick_id = uuid.uuid4()
     pool = await get_db()
 
     async with pool.acquire() as conn:
@@ -68,29 +72,41 @@ async def persister_node(state: FeedbackState) -> dict:
                     INSERT INTO feedback_clasificado
                         (external_id, sentimiento, urgencia, idioma, categorias, confianza, resumen)
                     VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    ON CONFLICT (external_id) DO NOTHING
+                    ON CONFLICT (external_id) DO UPDATE SET
+                        sentimiento = EXCLUDED.sentimiento,
+                        urgencia = EXCLUDED.urgencia,
+                        idioma = EXCLUDED.idioma,
+                        categorias = EXCLUDED.categorias,
+                        confianza = EXCLUDED.confianza,
+                        resumen = EXCLUDED.resumen
                     """,
                     records,
                 )
 
             if metrics:
                 await conn.execute(
-                    "INSERT INTO feedback_metricas (datos_metricas) VALUES ($1)",
+                    "INSERT INTO feedback_metricas (datos_metricas, tick_id) VALUES ($1, $2)",
                     json.dumps(metrics),
+                    tick_id,
                 )
 
             if patterns:
                 pattern_records = [
-                    (p["descripcion"], p["frecuencia_estimada"], p["nivel_impacto"])
+                    (p["descripcion"], p["frecuencia_estimada"], p["nivel_impacto"], tick_id)
                     for p in patterns
                 ]
                 await conn.executemany(
                     """
-                    INSERT INTO feedback_patrones (descripcion, frecuencia, impacto)
-                    VALUES ($1, $2, $3)
+                    INSERT INTO feedback_patrones (descripcion, frecuencia, impacto, tick_id)
+                    VALUES ($1, $2, $3, $4)
                     """,
                     pattern_records,
                 )
 
-    logger.info("persister_done", saved_count=len(processed), error_count=len(errors))
+    logger.info(
+        "persister_done",
+        saved_count=len(processed),
+        error_count=len(errors),
+        tick_id=str(tick_id),
+    )
     return {"current_batch": []}

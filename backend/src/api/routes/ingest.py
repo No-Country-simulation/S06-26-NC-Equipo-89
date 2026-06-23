@@ -5,10 +5,10 @@ import uuid
 from datetime import datetime, timezone
 
 import structlog
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 
 from shared.ingest_fields import SOURCE_FIELD_ALIASES, TEXT_FIELD_ALIASES, pick_field
-from src.api.deps import verify_api_key
+from src.api.deps import rate_limit_ingest, verify_api_key
 from src.schemas.feedback import FeedbackPayload
 from src.tools.supabase_client import get_db
 
@@ -25,8 +25,10 @@ INSERT_QUERY = """
 @router.post("/ingest", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_feedback(
     payload: FeedbackPayload,
+    request: Request,
     db=Depends(get_db),
     _=Depends(verify_api_key),
+    __=Depends(rate_limit_ingest),
 ):
     """
     Recibe payload de n8n, lo valida y lo inserta en feedback_raw (ADR-006).
@@ -52,9 +54,11 @@ async def ingest_feedback(
 
 @router.post("/ingest/csv", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_csv(
+    request: Request,
     file: UploadFile = File(...),
     db=Depends(get_db),
     _=Depends(verify_api_key),
+    __=Depends(rate_limit_ingest),
 ):
     """
     Recibe CSV desde Streamlit, parsea filas y las encola en feedback_raw.

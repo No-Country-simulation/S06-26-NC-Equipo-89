@@ -1,6 +1,7 @@
 import asyncio
 import structlog
 from src.agent.graph import app
+from src.core.queue_maintenance import recover_stuck_processing
 from src.tools.supabase_client import db_client
 from src.core.config import settings
 
@@ -21,12 +22,14 @@ async def run_worker_loop():
     try:
         while True:
             logger.info("worker_tick_start")
+
+            await recover_stuck_processing()
             
             # Estado inicial vacío. El loader_node se encargará de ir a Supabase.
             initial_state = {"current_batch": []}
             
             # Ejecutamos la máquina de estados de LangGraph de forma asíncrona
-            final_state = await app.ainvoke(initial_state)
+            await app.ainvoke(initial_state)
 
             # Indexar embeddings de items recién clasificados (RAG Copilot)
             from src.rag.embed_service import run_embed_indexing

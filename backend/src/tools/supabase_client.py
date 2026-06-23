@@ -1,6 +1,5 @@
 import asyncpg
 import structlog
-import json
 from src.core.config import settings
 
 logger = structlog.get_logger()

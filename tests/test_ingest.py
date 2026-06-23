@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,6 +23,21 @@ def test_health(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_health_deep_ok(client, mock_pool):
+    pool, conn = mock_pool
+    conn.fetchval = AsyncMock(return_value=1)
+
+    async def _get_db():
+        return pool
+
+    with patch("src.api.main.get_db", _get_db):
+        response = client.get("/health/deep")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["database"] == "connected"
 
 
 def test_ingest_rejects_without_api_key(client, sample_payload):

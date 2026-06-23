@@ -3,9 +3,9 @@ import structlog
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from src.api.deps import verify_api_key
+from src.api.deps import rate_limit_copilot, verify_api_key
 from src.core.config import settings
 from src.core.pgvector import vector_to_pg
 from src.schemas.copilot import CopilotRequest, CopilotResponse, CopilotSource
@@ -48,7 +48,9 @@ def _build_context(sources: list[dict]) -> str:
 @router.post("/ask", response_model=CopilotResponse)
 async def ask_copilot(
     payload: CopilotRequest,
+    request: Request,
     _=Depends(verify_api_key),
+    __=Depends(rate_limit_copilot),
 ) -> CopilotResponse:
     """Responde preguntas del analista usando RAG sobre feedback indexado."""
     question = payload.question.strip()

@@ -18,12 +18,13 @@ CREATE TABLE IF NOT EXISTS feedback_raw (
 
 CREATE INDEX IF NOT EXISTS idx_feedback_raw_estado ON feedback_raw(estado, timestamp);
 CREATE INDEX IF NOT EXISTS idx_feedback_raw_external_id ON feedback_raw(external_id);
+CREATE INDEX IF NOT EXISTS idx_raw_created_at ON feedback_raw(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS feedback_clasificado (
     id BIGSERIAL PRIMARY KEY,
     external_id VARCHAR(255) UNIQUE NOT NULL REFERENCES feedback_raw(external_id) ON DELETE CASCADE,
-    sentimiento VARCHAR(50) NOT NULL,
-    urgencia VARCHAR(50) NOT NULL,
+    sentimiento VARCHAR(50) NOT NULL CHECK (sentimiento IN ('Positivo', 'Negativo', 'Neutral')),
+    urgencia VARCHAR(50) NOT NULL CHECK (urgencia IN ('Alta', 'Media', 'Baja')),
     idioma VARCHAR(50) NOT NULL,
     categorias JSONB NOT NULL DEFAULT '[]'::jsonb,
     confianza FLOAT,
@@ -34,22 +35,31 @@ CREATE TABLE IF NOT EXISTS feedback_clasificado (
 
 CREATE INDEX IF NOT EXISTS idx_clasificado_sentimiento ON feedback_clasificado(sentimiento);
 CREATE INDEX IF NOT EXISTS idx_clasificado_urgencia ON feedback_clasificado(urgencia);
+CREATE INDEX IF NOT EXISTS idx_clasificado_created_at ON feedback_clasificado(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_clasificado_categorias ON feedback_clasificado USING GIN (categorias);
 CREATE INDEX IF NOT EXISTS idx_clasificado_embedding
   ON feedback_clasificado USING hnsw (embedding vector_cosine_ops);
 
 CREATE TABLE IF NOT EXISTS feedback_metricas (
     id BIGSERIAL PRIMARY KEY,
     datos_metricas JSONB NOT NULL,
+    tick_id UUID DEFAULT gen_random_uuid(),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_metricas_tick_id ON feedback_metricas(tick_id);
 
 CREATE TABLE IF NOT EXISTS feedback_patrones (
     id BIGSERIAL PRIMARY KEY,
     descripcion TEXT NOT NULL,
     frecuencia VARCHAR(100) NOT NULL,
     impacto VARCHAR(50) NOT NULL,
+    tick_id UUID,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_patrones_created_at ON feedback_patrones(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_patrones_tick_id ON feedback_patrones(tick_id);
 
 CREATE OR REPLACE FUNCTION match_feedback(
   query_embedding vector(1024),

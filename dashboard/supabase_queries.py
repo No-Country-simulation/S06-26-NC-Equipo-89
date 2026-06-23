@@ -19,6 +19,12 @@ def get_client() -> Client:
     key = os.getenv("SUPABASE_KEY", "")
     if not url or not key:
         raise EnvironmentError("SUPABASE_URL y SUPABASE_KEY deben estar en el archivo .env")
+    if os.getenv("ENV", "development").lower() == "production":
+        if os.getenv("DASHBOARD_READONLY", "").lower() not in ("1", "true", "yes"):
+            raise EnvironmentError(
+                "En producción use credenciales read-only (DASHBOARD_READONLY=true). "
+                "Ver docs/guides/bi-readonly-setup.md"
+            )
     return create_client(url, key)
 
 
@@ -60,12 +66,12 @@ def get_kpis() -> dict:
         .execute()
     )
 
-    # Patrones del último batch
-    patrones_res = (
-        client.table("feedback_patrones")
-        .select("id", count="exact")
-        .execute()
-    )
+    # Patrones del último tick
+    tick_id = get_latest_tick_id()
+    patrones_query = client.table("feedback_patrones").select("id", count="exact")
+    if tick_id:
+        patrones_query = patrones_query.eq("tick_id", tick_id)
+    patrones_res = patrones_query.execute()
 
     return {
         "total_procesados": total_procesados,
@@ -166,10 +172,32 @@ def get_mensajes_por_urgencia(urgencia: str | None = None, limit: int = 30) -> l
 # ─── PATRONES ──────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=60)
-def get_patrones(impacto_filtro: str | None = None) -> list[dict]:
-    """Patrones detectados por el agente, opcionalmente filtrados por impacto."""
+def get_latest_tick_id() -> str | None:
+    """tick_id del batch más reciente (métricas o patrones)."""
+    client = get_client()
+    for table in ("feedback_metricas", "feedback_patrones"):
+        res = (
+            client.table(table)
+            .select("tick_id, created_at")
+            .not_.is_("tick_id", "null")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if res.data and res.data[0].get("tick_id"):
+            return res.data[0]["tick_id"]
+    return None
+
+
+@st.cache_data(ttl=60)
+def get_patrones(impacto_filtro: str | None = None, *, latest_tick_only: bool = True) -> list[dict]:
+    """Patrones del agente; por defecto solo el último tick del worker."""
     client = get_client()
     query = client.table("feedback_patrones").select("*").order("created_at", desc=True)
+    if latest_tick_only:
+        tick_id = get_latest_tick_id()
+        if tick_id:
+            query = query.eq("tick_id", tick_id)
     if impacto_filtro and impacto_filtro != "Todos":
         query = query.eq("impacto", impacto_filtro)
     res = query.execute()
@@ -261,7 +289,7 @@ def get_ultimo_lote_metricas() -> dict | None:
     client = get_client()
     res = (
         client.table("feedback_metricas")
-        .select("datos_metricas, created_at")
+        .select("datos_metricas, created_at, tick_id")
         .order("created_at", desc=True)
         .limit(1)
         .execute()
@@ -274,5 +302,6 @@ def get_ultimo_lote_metricas() -> dict | None:
         datos = json.loads(datos)
     return {
         "created_at": row.get("created_at"),
+        "tick_id": row.get("tick_id"),
         "datos": datos,
     }

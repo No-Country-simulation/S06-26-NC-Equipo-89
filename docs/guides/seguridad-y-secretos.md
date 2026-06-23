@@ -20,8 +20,11 @@ El repositorio solo incluye plantillas vacías o con placeholders:
 | `GROQ_API_KEY` | Secreto | Fallback LLM |
 | `COHERE_API_KEY` | Secreto | Embeddings RAG |
 | `SUPABASE_KEY` | Secreto | Hoy `service_role` en demo — **no** en dashboard público |
-| `API_KEY` | Secreto | Header `X-API-Key` para FastAPI |
+| `API_KEY` | Secreto | Header `X-API-Key` para FastAPI (≥32 chars en producción) |
 | `WEBHOOK_URL` | Sensible | URL pública ngrok/dominio para Meta WhatsApp |
+| `ENV` | Config | `production` activa validación de `API_KEY` y desactiva PII en logs |
+| `DASHBOARD_READONLY` | Config | `true` obligatorio en dashboard prod (bloquea `service_role`) |
+| `CORS_ORIGINS` | Config | Orígenes permitidos del dashboard (comma-separated) |
 
 Generar `API_KEY` segura:
 
@@ -71,11 +74,12 @@ Si accidentalmente commiteaste un secreto:
 
 | Práctica | Demo actual | Producción |
 |----------|-------------|------------|
-| `API_KEY` | Puede ser débil en local | `openssl rand -hex 32` obligatorio |
-| Supabase dashboard | `service_role` | `anon` key + RLS por `org_id` |
-| RLS | Desactivado | Políticas por tenant |
+| `API_KEY` | Puede ser débil en local | `openssl rand -hex 32` obligatorio (`ENV=production`) |
+| Supabase dashboard | `service_role` | Rol `dashboard_readonly` + `DASHBOARD_READONLY=true` |
+| RLS | Desactivado | Single-tenant sin RLS (scope actual) |
 | Secretos en servidor | Archivo `.env` | Secrets manager / variables CI |
-| Logs | structlog con métricas tokens | No loguear payloads con PII |
+| Logs | structlog con métricas tokens | `LOG_PII=false` automático en producción |
+| Acceso dashboard | Puerto 8501 abierto | Proxy TLS + Basic Auth ([guía](dashboard-proxy-auth.md)) |
 
 Ver también: [bi-readonly-setup.md](bi-readonly-setup.md) para acceso de solo lectura.
 

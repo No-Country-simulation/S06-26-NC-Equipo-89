@@ -20,18 +20,22 @@ Recorrido recomendado (~15 min):
 ### Desarrollador (clonar y levantar)
 
 1. [README principal](../README.md) — instalación y variables de entorno
-2. [database/supabase_schema.sql](database/supabase_schema.sql) — schema de base de datos
-3. [guides/n8n-e2e-checklist.md](guides/n8n-e2e-checklist.md) — integración n8n
-4. [adr/](adr/) — antes de proponer cambios de arquitectura
+2. **[Entornos: local vs producción](guides/entornos-dev-y-prod.md)** — qué cambia (y qué no) con el hardening de prod
+3. [database/supabase_schema.sql](database/supabase_schema.sql) — schema de base de datos
+4. [guides/n8n-e2e-checklist.md](guides/n8n-e2e-checklist.md) — integración n8n
+5. [adr/](adr/) — antes de proponer cambios de arquitectura
 
 ### Operador (configurar integraciones)
 
 | Integración | Guía |
 |-------------|------|
+| **Local vs producción** | [guides/entornos-dev-y-prod.md](guides/entornos-dev-y-prod.md) |
 | n8n + FastAPI + worker | [guides/n8n-e2e-checklist.md](guides/n8n-e2e-checklist.md) |
 | Tally | [guides/n8n-tally-webhook.md](guides/n8n-tally-webhook.md) |
 | Google Forms (alternativa) | [guides/n8n-google-forms-apps-script.md](guides/n8n-google-forms-apps-script.md) |
-| BI read-only | [guides/bi-readonly-setup.md](guides/bi-readonly-setup.md) |
+| BI / dashboard read-only | [guides/bi-readonly-setup.md](guides/bi-readonly-setup.md) |
+| Proxy TLS dashboard | [guides/dashboard-proxy-auth.md](guides/dashboard-proxy-auth.md) |
+| Runbook producción | [guides/runbook-produccion.md](guides/runbook-produccion.md) |
 | **Secretos y Git** | [guides/seguridad-y-secretos.md](guides/seguridad-y-secretos.md) |
 
 ---
@@ -46,6 +50,7 @@ Recorrido recomendado (~15 min):
 | **4. Agente IA** | ADR-001, ADR-002, ADR-006, `prompts/` | LangGraph + optimización tokens (fases A–D) |
 | **5. Dashboard** | ADR-007, [plans/plan-dashboard-ux-v3.md](plans/plan-dashboard-ux-v3.md) | v3 implementado |
 | **6. Copilot RAG** | ADR-008 | Cohere + pgvector |
+| **7. Producción single-tenant** | [plans/plan-produccion-single-tenant.md](plans/plan-produccion-single-tenant.md) | Hardening BD, CI, docker prod |
 
 Detalle de implementación: [estado-implementacion.md](estado-implementacion.md)
 
@@ -66,10 +71,13 @@ Registro permanente de decisiones técnicas. **Empezar aquí** para entender el 
 | [supabase_schema.sql](database/supabase_schema.sql) | Proyecto nuevo |
 | [migrations/005_rag_copilot.sql](database/migrations/005_rag_copilot.sql) | Añadir RAG a DB existente |
 | [migrations/006_schema_hardening.sql](database/migrations/006_schema_hardening.sql) | Hardening de tablas previas |
+| [migrations/007_production_hardening.sql](database/migrations/007_production_hardening.sql) | CHECK enums, `tick_id`, índices (prod + dev actualizado) |
 
 ### `guides/` — Guías operativas
 
 Procedimientos paso a paso para configurar y verificar el sistema en local o producción.
+
+Punto de entrada recomendado: [entornos-dev-y-prod.md](guides/entornos-dev-y-prod.md)
 
 ### `plans/` — Especificaciones de diseño (archivo)
 
@@ -80,6 +88,7 @@ Procedimientos paso a paso para configurar y verificar el sistema en local o pro
 | [optimizacion-llm-fase-a.md](plans/optimizacion-llm-fase-a.md) | **Implementada** — system/user + TSV patrones |
 | [optimizacion-llm-fase-b.md](plans/optimizacion-llm-fase-b.md) | **Implementada** — caché explícito Gemini + few-shot |
 | [optimizacion-llm-microbatch.md](plans/optimizacion-llm-microbatch.md) | **Implementada** — micro-batch ×8 + métricas tokens |
+| [plan-produccion-single-tenant.md](plans/plan-produccion-single-tenant.md) | **Implementada** — hardening prod, CI, runbook |
 
 Los planes documentan el *diseño previo* a la implementación. El código fuente es la referencia final.
 

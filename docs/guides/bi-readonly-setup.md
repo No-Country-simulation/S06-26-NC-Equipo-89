@@ -1,8 +1,40 @@
-# BI read-only — Power BI / Metabase (ADR-007)
+# BI read-only — Power BI / Metabase / Dashboard Streamlit (ADR-007)
 
-Configuración opcional para conectar herramientas de BI a Supabase sin acceso de escritura.
+Configuración para conectar herramientas de BI y el **dashboard Streamlit** a Supabase sin acceso de escritura.
 
-## 1. Crear usuario read-only en Supabase
+> **Producción:** nunca usar `service_role` en Streamlit. Usar el rol `dashboard_readonly` descrito abajo.
+
+## 1. Rol read-only para dashboard (Streamlit)
+
+Ejecutar en el **SQL Editor** de Supabase (ajustar contraseña):
+
+```sql
+CREATE ROLE dashboard_readonly LOGIN PASSWORD 'cambiar-por-password-segura';
+
+GRANT CONNECT ON DATABASE postgres TO dashboard_readonly;
+GRANT USAGE ON SCHEMA public TO dashboard_readonly;
+
+GRANT SELECT ON feedback_raw TO dashboard_readonly;
+GRANT SELECT ON feedback_clasificado TO dashboard_readonly;
+GRANT SELECT ON feedback_patrones TO dashboard_readonly;
+GRANT SELECT ON feedback_metricas TO dashboard_readonly;
+```
+
+En Supabase gestionado, si `CREATE ROLE` no está permitido, crear un usuario con permisos SELECT limitados desde **Database → Roles** o usar JWT custom con políticas RLS (fuera de scope single-tenant).
+
+### Variables del dashboard en producción
+
+```bash
+ENV=production
+DASHBOARD_READONLY=true
+SUPABASE_URL=https://[proyecto].supabase.co
+# JWT del rol dashboard_readonly o API key con permisos SELECT únicamente
+SUPABASE_KEY=[credencial-read-only]
+```
+
+El dashboard valida `DASHBOARD_READONLY=true` cuando `ENV=production` para evitar arrancar con `service_role` por error.
+
+## 2. Usuario read-only para BI externo
 
 Ejecutar en el **SQL Editor** de Supabase (ajustar contraseña):
 
@@ -90,6 +122,8 @@ LIMIT 1;
 
 ## 6. Seguridad
 
-- No usar `service_role` ni credenciales del worker en BI
-- Rotar password de `bi_readonly` periódicamente
+- No usar `service_role` en Streamlit ni en herramientas BI
+- Worker y FastAPI siguen con `DB_DSN` de escritura (pooler Supabase)
+- Rotar password de `dashboard_readonly` / `bi_readonly` periódicamente
 - No exponer `feedback_raw` con metadata completa si contiene PII no necesaria para reportes
+- Proteger el dashboard con proxy TLS + Basic Auth: [dashboard-proxy-auth.md](dashboard-proxy-auth.md)
