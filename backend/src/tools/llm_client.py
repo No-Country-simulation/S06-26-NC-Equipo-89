@@ -6,6 +6,7 @@ import structlog
 from pydantic import BaseModel
 
 from src.core.config import settings
+from src.core.llm_usage import UsageStats, merge_usage_stats
 from src.tools.gemini_client import gemini_client
 from src.tools.groq_client import groq_client
 
@@ -24,10 +25,29 @@ def _is_retryable(exc: Exception) -> bool:
     )
 
 
-async def generate_json(prompt: str, schema: type[BaseModel]) -> str:
+async def generate_json(
+    prompt: str,
+    schema: type[BaseModel],
+    *,
+    system_instruction: str | None = None,
+    usage_stats: UsageStats | None = None,
+    cache_profile: str | None = None,
+) -> str:
     """JSON estructurado: Gemini → Groq si falla por disponibilidad."""
+    if cache_profile is None and system_instruction:
+        from src.core.gemini_cache import CLASSIFICATION_PROFILE
+
+        cache_profile = CLASSIFICATION_PROFILE
+
     try:
-        return await gemini_client.generate_json(prompt=prompt, schema=schema)
+        text, usage = await gemini_client.generate_json(
+            prompt=prompt,
+            schema=schema,
+            system_instruction=system_instruction,
+            cache_profile=cache_profile,
+        )
+        merge_usage_stats(usage_stats, usage, "gemini")
+        return text
     except Exception as exc:
         if not _groq_enabled():
             raise
@@ -35,13 +55,21 @@ async def generate_json(prompt: str, schema: type[BaseModel]) -> str:
             logger.warning("llm_gemini_failed_no_fallback", error=str(exc))
             raise
         logger.warning("llm_fallback_groq_json", gemini_error=str(exc))
-        return await groq_client.generate_json(prompt=prompt, schema=schema)
+        text, usage = await groq_client.generate_json(
+            prompt=prompt,
+            schema=schema,
+            system_instruction=system_instruction,
+        )
+        merge_usage_stats(usage_stats, usage, "groq")
+        return text
 
 
 async def generate_text(prompt: str, temperature: float = 0.3) -> str:
     """Texto libre: Gemini → Groq si falla por disponibilidad."""
     try:
-        return await gemini_client.generate_text(prompt=prompt, temperature=temperature)
+        text, usage = await gemini_client.generate_text(prompt=prompt, temperature=temperature)
+        logger.info("llm_token_usage", provider="gemini", **usage)
+        return text
     except Exception as exc:
         if not _groq_enabled():
             raise
@@ -49,4 +77,6 @@ async def generate_text(prompt: str, temperature: float = 0.3) -> str:
             logger.warning("llm_gemini_text_failed_no_fallback", error=str(exc))
             raise
         logger.warning("llm_fallback_groq_text", gemini_error=str(exc))
-        return await groq_client.generate_text(prompt=prompt, temperature=temperature)
+        text, usage = await groq_client.generate_text(prompt=prompt, temperature=temperature)
+        logger.info("llm_token_usage", provider="groq", **usage)
+        return text

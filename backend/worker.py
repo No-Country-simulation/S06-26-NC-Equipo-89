@@ -13,6 +13,10 @@ async def run_worker_loop():
     """
     logger.info("worker_starting")
     await db_client.connect()
+
+    from src.tools.gemini_client import gemini_client
+
+    await gemini_client.warm_classification_cache()
     
     try:
         while True:

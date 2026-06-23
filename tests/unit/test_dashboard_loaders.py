@@ -1,5 +1,6 @@
 """Tests para parsers de carga manual del dashboard."""
 
+import io
 import json
 
 import pandas as pd
@@ -28,6 +29,15 @@ def test_parse_csv_skips_empty_texto():
     df = parse_csv(raw)
     assert len(df) == 1
     assert df.iloc[0]["texto"] == "Valido"
+
+
+def test_parse_csv_content_source_aliases():
+    raw = b"id,source,external_id,content\n1,manual,ma_001,Me cobraron de mas\n"
+    df = parse_csv(raw)
+    assert len(df) == 1
+    assert df.iloc[0]["texto"] == "Me cobraron de mas"
+    assert df.iloc[0]["fuente"] == "manual"
+    assert df.iloc[0]["external_id"] == "ma_001"
 
 
 def test_parse_csv_missing_texto_column():
@@ -67,3 +77,22 @@ def test_to_csv_bytes_roundtrip():
     out = to_csv_bytes(df)
     assert b"texto" in out
     assert b"A" in out
+
+
+def test_parse_excel_skips_readme_sheet():
+    pytest.importorskip("openpyxl")
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        pd.DataFrame({"info": ["readme"]}).to_excel(writer, sheet_name="LEEME", index=False)
+        pd.DataFrame(
+            {
+                "content": ["Hola mundo", "Otro mensaje"],
+                "source": ["manual", "manual"],
+                "external_id": ["x1", "x2"],
+            }
+        ).to_excel(writer, sheet_name="feedback", index=False)
+    buf.seek(0)
+    df, fmt = parse_upload("datasets.xlsx", buf.read())
+    assert fmt == "Excel"
+    assert len(df) == 2
+    assert df.iloc[0]["texto"] == "Hola mundo"

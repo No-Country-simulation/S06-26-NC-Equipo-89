@@ -68,3 +68,18 @@ def test_ingest_csv_skips_empty_texto(client, api_key, mock_pool):
     data = response.json()
     assert data["inserted"] == 1
     assert data["skipped"] == 1
+
+
+def test_ingest_csv_accepts_content_and_source_aliases(client, api_key, mock_pool):
+    pool, conn = mock_pool
+    csv_content = "content,source\nHello from alias,whatsapp\n"
+    response = client.post(
+        "/ingest/csv",
+        files={"file": ("alias.csv", csv_content, "text/csv")},
+        headers={"X-API-Key": api_key},
+    )
+    assert response.status_code == 202
+    data = response.json()
+    assert data["inserted"] == 1
+    assert data["skipped"] == 0
+    assert conn.execute.await_count == 1

@@ -9,6 +9,8 @@ from typing import Any
 
 import pandas as pd
 
+from shared.ingest_fields import SOURCE_COLUMN_ALIASES, TEXT_COLUMN_ALIASES
+
 REQUIRED_COLUMN = "texto"
 OPTIONAL_COLUMNS = ("fuente", "external_id")
 MAX_ROWS_WARNING = 500
@@ -31,14 +33,53 @@ def _records_from_json(raw: bytes) -> list[dict[str, Any]]:
     raise LoaderError("El JSON debe ser un objeto o un array de objetos.")
 
 
+def _column_lookup(df: pd.DataFrame) -> dict[str, str]:
+    """Mapa nombre en minúsculas → nombre real en el DataFrame."""
+    return {str(c).strip().lower(): str(c) for c in df.columns}
+
+
+def _sheet_has_text_column(df: pd.DataFrame) -> bool:
+    """True si la hoja tiene columna texto o alias reconocido."""
+    lookup = _column_lookup(_apply_column_aliases(df))
+    return "texto" in lookup
+
+
+def _apply_column_aliases(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normaliza columnas de datasets externos (content/source) al esquema de ingesta.
+    Prioriza `content` sobre `content_sanitized` para el texto original.
+    """
+    df = df.copy()
+    lookup = _column_lookup(df)
+    rename: dict[str, str] = {}
+
+    if "texto" not in lookup:
+        for alias in TEXT_COLUMN_ALIASES:
+            if alias in lookup:
+                rename[lookup[alias]] = "texto"
+                break
+
+    if "fuente" not in lookup:
+        for alias in SOURCE_COLUMN_ALIASES:
+            if alias in lookup:
+                rename[lookup[alias]] = "fuente"
+                break
+
+    if rename:
+        df = df.rename(columns=rename)
+    return df
+
+
 def _normalize_records(records: list[dict[str, Any]]) -> pd.DataFrame:
     if not records:
         raise LoaderError("El archivo no contiene registros.")
 
     df = pd.DataFrame(records)
+    df = _apply_column_aliases(df)
     if REQUIRED_COLUMN not in df.columns:
         raise LoaderError(
             f"Falta la columna obligatoria `{REQUIRED_COLUMN}`. "
+            f"Usá `texto` o alias como `content`. "
             f"Columnas encontradas: {', '.join(df.columns.astype(str))}"
         )
 
@@ -84,13 +125,29 @@ def parse_json(raw: bytes) -> pd.DataFrame:
 
 
 def parse_excel(raw: bytes, filename: str) -> pd.DataFrame:
-    """Parsea XLS/XLSX — primera hoja."""
+    """Parsea XLS/XLSX — usa la primera hoja con columna texto/content."""
     engine = "xlrd" if filename.lower().endswith(".xls") else "openpyxl"
     try:
-        df = pd.read_excel(io.BytesIO(raw), engine=engine)
+        xl = pd.ExcelFile(io.BytesIO(raw), engine=engine)
     except Exception as e:
         raise LoaderError(f"No se pudo leer el Excel: {e}") from e
-    return _normalize_records(df.to_dict(orient="records"))
+
+    last_error: LoaderError | None = None
+    for sheet in xl.sheet_names:
+        df = pd.read_excel(xl, sheet_name=sheet)
+        if df.empty or not _sheet_has_text_column(df):
+            continue
+        try:
+            return _normalize_records(df.to_dict(orient="records"))
+        except LoaderError as e:
+            last_error = e
+
+    if last_error:
+        raise last_error
+    raise LoaderError(
+        "Ninguna hoja del Excel tiene columna texto/content. "
+        f"Hojas encontradas: {', '.join(xl.sheet_names)}"
+    )
 
 
 def parse_upload(filename: str, raw: bytes) -> tuple[pd.DataFrame, str]:
@@ -121,8 +178,14 @@ def count_skipped_rows(filename: str, raw: bytes) -> int:
             records = _records_from_json(raw)
         elif lower.endswith((".xlsx", ".xls")):
             engine = "xlrd" if lower.endswith(".xls") else "openpyxl"
-            df = pd.read_excel(io.BytesIO(raw), engine=engine)
-            records = df.to_dict(orient="records")
+            xl = pd.ExcelFile(io.BytesIO(raw), engine=engine)
+            records = []
+            for sheet in xl.sheet_names:
+                df = pd.read_excel(xl, sheet_name=sheet)
+                if df.empty or not _sheet_has_text_column(df):
+                    continue
+                records = df.to_dict(orient="records")
+                break
         else:
             return 0
     except Exception:
@@ -131,6 +194,7 @@ def count_skipped_rows(filename: str, raw: bytes) -> int:
     if not records:
         return 0
     df_raw = pd.DataFrame(records)
+    df_raw = _apply_column_aliases(df_raw)
     if REQUIRED_COLUMN not in df_raw.columns:
         return 0
     total = len(df_raw)

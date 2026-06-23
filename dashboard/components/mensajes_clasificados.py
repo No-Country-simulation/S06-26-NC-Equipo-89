@@ -7,16 +7,10 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.formatters import format_fecha
 from dashboard.components.feedback_card import feedback_card_html
 from dashboard.components.ui import empty_state, section_header
 from dashboard.supabase_queries import get_clasificados_export
-
-
-def _format_fecha(value: str) -> str:
-    ts = pd.to_datetime(value, errors="coerce")
-    if pd.isna(ts):
-        return str(value or "—")
-    return ts.strftime("%d/%m/%Y %H:%M")
 
 
 def _apply_filters(df: pd.DataFrame) -> pd.DataFrame:
@@ -102,7 +96,7 @@ def render() -> None:
         cats = row.get("categorias", [])
         if not isinstance(cats, list):
             cats = [cats] if cats else []
-        fecha = _format_fecha(row.get("clasificado_at") or row.get("timestamp", ""))
+        fecha = format_fecha(row.get("clasificado_at") or row.get("timestamp", ""))
         st.markdown(
             feedback_card_html(
                 external_id=str(row.get("external_id", "")),

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import streamlit as st
 
-from dashboard.supabase_queries import get_last_activity_at, get_pending_count
+from dashboard.supabase_queries import get_last_activity_at, get_queue_health
 
 
 def _format_relative(iso_ts: str) -> str:
@@ -47,9 +47,13 @@ def render() -> None:
         parts.append("No se pudo obtener la última actualización")
 
     try:
-        pending = get_pending_count()
+        health = get_queue_health()
+        pending = health["pendientes"]
         if pending > 0:
             parts.append(f"⏳ {pending} en cola")
+        errors = health["errores"]
+        if errors > 0:
+            parts.append(f"⚠ {errors} con error")
     except Exception:
         pass
 

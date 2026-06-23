@@ -17,11 +17,22 @@ async def test_generate_json_falls_back_to_groq_on_503():
             with patch(
                 "src.tools.llm_client.groq_client.generate_json",
                 new_callable=AsyncMock,
-                return_value='{"sentimiento":"Neutral","categorias":[],"urgencia":"Baja","idioma":"Español","confianza":0.5,"resumen":"ok"}',
+                return_value=(
+                    '{"sentimiento":"Neutral","categorias":[],"urgencia":"Baja","idioma":"Español","confianza":0.5,"resumen":"ok"}',
+                    {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+                ),
             ) as mock_groq:
-                result = await llm_client.generate_json("test", FeedbackClassification)
+                result = await llm_client.generate_json(
+                    "solo el texto",
+                    FeedbackClassification,
+                    system_instruction="reglas fijas",
+                )
                 assert "Neutral" in result
-                mock_groq.assert_awaited_once()
+                mock_groq.assert_awaited_once_with(
+                    prompt="solo el texto",
+                    schema=FeedbackClassification,
+                    system_instruction="reglas fijas",
+                )
 
 
 @pytest.mark.asyncio

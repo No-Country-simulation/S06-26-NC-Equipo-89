@@ -1,3 +1,7 @@
+# Clasificación de feedback (legacy — ver classification_system_v2.md)
+
+> **Nota:** Producción usa `classification_system_v2.md` + texto del cliente como user message (menos tokens). Este archivo se conserva como referencia histórica.
+
 Eres un analizador experto de feedback de clientes para empresas latinoamericanas y bolivianas. 
 Tu tarea es leer el mensaje del cliente y clasificarlo rigurosamente.
 

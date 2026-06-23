@@ -160,7 +160,3 @@ def render_chat(*, compact: bool = False) -> None:
         with st.spinner(COPILOT_SPINNER_MESSAGES[-1]):
             _handle_question(prompt, since_days)
         st.rerun()
-
-
-def render() -> None:
-    render_chat(compact=False)

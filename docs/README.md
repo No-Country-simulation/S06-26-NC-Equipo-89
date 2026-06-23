@@ -32,6 +32,7 @@ Recorrido recomendado (~15 min):
 | Tally | [guides/n8n-tally-webhook.md](guides/n8n-tally-webhook.md) |
 | Google Forms (alternativa) | [guides/n8n-google-forms-apps-script.md](guides/n8n-google-forms-apps-script.md) |
 | BI read-only | [guides/bi-readonly-setup.md](guides/bi-readonly-setup.md) |
+| **Secretos y Git** | [guides/seguridad-y-secretos.md](guides/seguridad-y-secretos.md) |
 
 ---
 
@@ -42,7 +43,7 @@ Recorrido recomendado (~15 min):
 | **1. Arquitectura** | [adr/](adr/) | Completo (8 ADRs) |
 | **2. Base de datos** | [database/](database/) | Schema + migraciones |
 | **3. Ingestión** | ADR-003, ADR-004, [guides/](guides/) | n8n + FastAPI + carga manual |
-| **4. Agente IA** | ADR-001, ADR-002, ADR-006, `prompts/` | LangGraph + Groq fallback |
+| **4. Agente IA** | ADR-001, ADR-002, ADR-006, `prompts/` | LangGraph + optimización tokens (fases A–D) |
 | **5. Dashboard** | ADR-007, [plans/plan-dashboard-ux-v3.md](plans/plan-dashboard-ux-v3.md) | v3 implementado |
 | **6. Copilot RAG** | ADR-008 | Cohere + pgvector |
 
@@ -76,8 +77,20 @@ Procedimientos paso a paso para configurar y verificar el sistema en local o pro
 |------|--------|
 | [plan-dashboard-streamlit-v2.md](plans/plan-dashboard-streamlit-v2.md) | Superseded |
 | [plan-dashboard-ux-v3.md](plans/plan-dashboard-ux-v3.md) | Implementado — ver `dashboard/` |
+| [optimizacion-llm-fase-a.md](plans/optimizacion-llm-fase-a.md) | **Implementada** — system/user + TSV patrones |
+| [optimizacion-llm-fase-b.md](plans/optimizacion-llm-fase-b.md) | **Implementada** — caché explícito Gemini + few-shot |
+| [optimizacion-llm-microbatch.md](plans/optimizacion-llm-microbatch.md) | **Implementada** — micro-batch ×8 + métricas tokens |
 
 Los planes documentan el *diseño previo* a la implementación. El código fuente es la referencia final.
+
+### Optimización LLM (implementada)
+
+| Fase | Doc | Técnica |
+|------|-----|---------|
+| A | [optimizacion-llm-fase-a.md](plans/optimizacion-llm-fase-a.md) | System/user split + TSV patrones |
+| B | [optimizacion-llm-fase-b.md](plans/optimizacion-llm-fase-b.md) | Caché explícito Gemini + few-shot |
+| C | [optimizacion-llm-microbatch.md](plans/optimizacion-llm-microbatch.md) | Micro-batch ×8 + fallback 1-a-1 |
+| D | (logs `classifier_done`) | Métricas tokens + `cached_content_tokens` |
 
 ---
 

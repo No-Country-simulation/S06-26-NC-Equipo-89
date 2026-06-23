@@ -8,6 +8,7 @@
 - [ ] Workflow **activo** (toggle ON) — sin esto los webhooks devuelven 404
 - [ ] `worker.py` corriendo
 - [ ] Variables en `.env`: `API_KEY`, `FASTAPI_INGEST_URL`, `GROQ_API_KEY` (recomendado)
+- [ ] `.env` **no** commiteado — ver [seguridad-y-secretos.md](seguridad-y-secretos.md)
 
 Recrear n8n tras cambiar `.env`:
 

@@ -38,7 +38,7 @@ def test_copilot_ask_with_mocks(client, api_key, mock_pool):
             AsyncMock(return_value=[0.1] * 1024),
         ),
         patch(
-            "src.api.routes.copilot.gemini_client.generate_text",
+            "src.api.routes.copilot.generate_text",
             AsyncMock(return_value="Los clientes reportan fallas técnicas."),
         ),
     ):

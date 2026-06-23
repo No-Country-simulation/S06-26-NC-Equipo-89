@@ -3,6 +3,7 @@
 import asyncio
 import structlog
 from src.core.config import settings
+from src.core.pgvector import vector_to_pg
 from src.tools.cohere_client import cohere_client
 from src.tools.supabase_client import get_db
 
@@ -22,10 +23,6 @@ COUNT_REMAINING_QUERY = """
     FROM feedback_clasificado
     WHERE embedding IS NULL
 """
-
-
-def _vector_to_pg(vector: list[float]) -> str:
-    return "[" + ",".join(str(v) for v in vector) + "]"
 
 
 async def run_embed_indexing() -> int:
@@ -59,7 +56,7 @@ async def run_embed_indexing() -> int:
                         SET embedding = $1::vector
                         WHERE external_id = $2 AND embedding IS NULL
                         """,
-                        _vector_to_pg(vector),
+                        vector_to_pg(vector),
                         external_id,
                     )
 

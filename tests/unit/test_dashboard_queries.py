@@ -81,18 +81,40 @@ def test_check_fastapi_health_connect_error(mock_get):
 
 @patch("dashboard.supabase_queries.get_client")
 def test_get_pending_count(mock_get_client):
-    from dashboard.supabase_queries import get_pending_count
+    from dashboard.supabase_queries import get_pending_count, get_queue_health
 
     mock_client = MagicMock()
     mock_get_client.return_value = mock_client
-    mock_res = MagicMock()
-    mock_res.count = 5
-    mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
-        mock_res
-    )
+    pending_res = MagicMock()
+    pending_res.count = 5
+    error_res = MagicMock()
+    error_res.count = 0
+    mock_client.table.return_value.select.return_value.eq.return_value.execute.side_effect = [
+        pending_res,
+        error_res,
+    ]
 
-    get_pending_count.clear()
+    get_queue_health.clear()
     assert get_pending_count() == 5
+
+
+@patch("dashboard.supabase_queries.get_client")
+def test_get_queue_health(mock_get_client):
+    from dashboard.supabase_queries import get_queue_health
+
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    pending_res = MagicMock()
+    pending_res.count = 3
+    error_res = MagicMock()
+    error_res.count = 2
+    mock_client.table.return_value.select.return_value.eq.return_value.execute.side_effect = [
+        pending_res,
+        error_res,
+    ]
+
+    get_queue_health.clear()
+    assert get_queue_health() == {"pendientes": 3, "errores": 2}
 
 
 @patch("dashboard.supabase_queries.get_client")

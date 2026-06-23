@@ -5,34 +5,21 @@ import uuid
 from datetime import datetime, timezone
 
 import structlog
-from fastapi import APIRouter, Depends, File, HTTPException, Security, UploadFile, status
-from fastapi.security import APIKeyHeader
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
-from src.core.config import settings
+from shared.ingest_fields import SOURCE_FIELD_ALIASES, TEXT_FIELD_ALIASES, pick_field
+from src.api.deps import verify_api_key
 from src.schemas.feedback import FeedbackPayload
 from src.tools.supabase_client import get_db
 
 logger = structlog.get_logger()
 router = APIRouter()
 
-api_key_header = APIKeyHeader(name="X-API-Key")
-
 INSERT_QUERY = """
     INSERT INTO feedback_raw (external_id, fuente, texto, timestamp, metadata, estado)
     VALUES ($1, $2, $3, $4, $5, 'pendiente')
     ON CONFLICT (external_id) DO NOTHING
 """
-
-
-async def verify_api_key(api_key: str = Security(api_key_header)) -> str:
-    """Verifica que el request provenga de n8n o un cliente autorizado."""
-    if api_key != settings.api_key:
-        logger.warning("auth_failed", reason="invalid_api_key")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API Key",
-        )
-    return api_key
 
 
 @router.post("/ingest", status_code=status.HTTP_202_ACCEPTED)
@@ -83,8 +70,13 @@ async def ingest_csv(
         raise HTTPException(status_code=400, detail="El CSV debe estar en UTF-8")
 
     reader = csv.DictReader(io.StringIO(text))
-    if not reader.fieldnames or "texto" not in reader.fieldnames:
-        raise HTTPException(status_code=400, detail="El CSV debe incluir columna 'texto'")
+    fieldnames = [f.strip().lower() for f in (reader.fieldnames or [])]
+    has_text = any(alias in fieldnames for alias in TEXT_FIELD_ALIASES)
+    if not reader.fieldnames or not has_text:
+        raise HTTPException(
+            status_code=400,
+            detail="El CSV debe incluir columna 'texto' (o alias: content, message, comentario)",
+        )
 
     inserted = 0
     skipped = 0
@@ -93,13 +85,13 @@ async def ingest_csv(
     async with db.acquire() as conn:
         async with conn.transaction():
             for row in reader:
-                texto = (row.get("texto") or "").strip()
+                texto = pick_field(row, TEXT_FIELD_ALIASES)
                 if not texto:
                     skipped += 1
                     continue
 
-                external_id = (row.get("external_id") or "").strip() or f"csv-{uuid.uuid4()}"
-                fuente = (row.get("fuente") or "").strip() or "csv"
+                external_id = pick_field(row, ("external_id",)) or f"csv-{uuid.uuid4()}"
+                fuente = pick_field(row, SOURCE_FIELD_ALIASES) or "csv"
 
                 result = await conn.execute(
                     INSERT_QUERY,

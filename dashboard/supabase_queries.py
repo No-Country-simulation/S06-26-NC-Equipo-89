@@ -3,12 +3,15 @@ Capa de acceso a datos del Dashboard.
 Centraliza todas las consultas a Supabase.
 Los componentes NO deben importar supabase directamente.
 """
+import json
 import os
+
 import streamlit as st
-from supabase import create_client, Client
 from dotenv import load_dotenv
+from supabase import Client, create_client
 
 load_dotenv()
+
 
 @st.cache_resource
 def get_client() -> Client:
@@ -123,6 +126,24 @@ def get_urgencia_distribucion() -> list[dict]:
     return [{"urgencia": k, "cantidad": v} for k, v in conteo.items()]
 
 
+def _flatten_clasificado_row(item: dict) -> dict:
+    """Une fila de feedback_clasificado con su feedback_raw embebido."""
+    raw = item.get("feedback_raw") or {}
+    return {
+        "external_id": item.get("external_id", ""),
+        "fuente": raw.get("fuente", ""),
+        "texto": raw.get("texto", ""),
+        "timestamp": raw.get("timestamp", ""),
+        "sentimiento": item.get("sentimiento", ""),
+        "urgencia": item.get("urgencia", ""),
+        "categorias": item.get("categorias", []),
+        "confianza": item.get("confianza"),
+        "resumen": item.get("resumen", ""),
+        "idioma": item.get("idioma", ""),
+        "clasificado_at": item.get("created_at", ""),
+    }
+
+
 @st.cache_data(ttl=30)
 def get_mensajes_por_urgencia(urgencia: str | None = None, limit: int = 30) -> list[dict]:
     """Mensajes clasificados filtrados por urgencia, con texto y metadatos."""
@@ -139,43 +160,7 @@ def get_mensajes_por_urgencia(urgencia: str | None = None, limit: int = 30) -> l
     if urgencia:
         query = query.eq("urgencia", urgencia)
     res = query.execute()
-    rows = []
-    for item in res.data or []:
-        raw = item.get("feedback_raw") or {}
-        rows.append({
-            "external_id": item.get("external_id", ""),
-            "fuente": raw.get("fuente", ""),
-            "texto": raw.get("texto", ""),
-            "timestamp": raw.get("timestamp", ""),
-            "sentimiento": item.get("sentimiento", ""),
-            "urgencia": item.get("urgencia", ""),
-            "categorias": item.get("categorias", []),
-            "confianza": item.get("confianza"),
-            "resumen": item.get("resumen", ""),
-            "idioma": item.get("idioma", ""),
-            "clasificado_at": item.get("created_at", ""),
-        })
-    return rows
-
-
-@st.cache_data(ttl=30)
-def get_alertas_urgencia_alta(limit: int = 20) -> list[dict]:
-    """Últimos N mensajes con urgencia Alta, incluyendo texto original."""
-    rows = get_mensajes_por_urgencia(urgencia="Alta", limit=limit)
-    return [
-        {
-            "external_id": r["external_id"],
-            "fuente": r["fuente"],
-            "texto": r["texto"],
-            "categorias": ", ".join(r["categorias"]) if isinstance(r["categorias"], list) else r["categorias"],
-            "timestamp": r["timestamp"],
-            "resumen": r["resumen"],
-            "confianza": r["confianza"],
-            "idioma": r["idioma"],
-            "sentimiento": r["sentimiento"],
-        }
-        for r in rows
-    ]
+    return [_flatten_clasificado_row(item) for item in (res.data or [])]
 
 
 # ─── PATRONES ──────────────────────────────────────────────────────────────────
@@ -206,36 +191,39 @@ def get_clasificados_export() -> list[dict]:
         .order("created_at", desc=True)
         .execute()
     )
-    rows = []
-    for item in (res.data or []):
-        raw = item.get("feedback_raw") or {}
-        rows.append({
-            "external_id": item.get("external_id", ""),
-            "fuente": raw.get("fuente", ""),
-            "texto": raw.get("texto", ""),
-            "timestamp": raw.get("timestamp", ""),
-            "sentimiento": item.get("sentimiento", ""),
-            "urgencia": item.get("urgencia", ""),
-            "idioma": item.get("idioma", ""),
-            "categorias": item.get("categorias", []),
-            "confianza": item.get("confianza"),
-            "resumen": item.get("resumen", ""),
-            "clasificado_at": item.get("created_at", ""),
-        })
-    return rows
+    return [_flatten_clasificado_row(item) for item in (res.data or [])]
 
 
 @st.cache_data(ttl=30)
-def get_pending_count() -> int:
-    """Cantidad de mensajes en cola sin clasificar."""
+def get_queue_health() -> dict[str, int]:
+    """Resumen de cola de procesamiento (pendientes + errores)."""
     client = get_client()
-    res = (
+    pending_res = (
         client.table("feedback_raw")
         .select("id", count="exact")
         .eq("estado", "pendiente")
         .execute()
     )
-    return res.count or 0
+    error_res = (
+        client.table("feedback_raw")
+        .select("id", count="exact")
+        .eq("estado", "error")
+        .execute()
+    )
+    return {
+        "pendientes": pending_res.count or 0,
+        "errores": error_res.count or 0,
+    }
+
+
+def get_pending_count() -> int:
+    """Cantidad de mensajes en cola sin clasificar."""
+    return get_queue_health()["pendientes"]
+
+
+def get_error_count() -> int:
+    """Cantidad de mensajes que agotaron reintentos (estado error)."""
+    return get_queue_health()["errores"]
 
 
 @st.cache_data(ttl=60)
@@ -283,7 +271,6 @@ def get_ultimo_lote_metricas() -> dict | None:
     row = res.data[0]
     datos = row.get("datos_metricas") or {}
     if isinstance(datos, str):
-        import json
         datos = json.loads(datos)
     return {
         "created_at": row.get("created_at"),

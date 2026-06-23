@@ -3,10 +3,11 @@ import structlog
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Security, status
-from fastapi.security import APIKeyHeader
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.api.deps import verify_api_key
 from src.core.config import settings
+from src.core.pgvector import vector_to_pg
 from src.schemas.copilot import CopilotRequest, CopilotResponse, CopilotSource
 from src.tools.cohere_client import cohere_client
 from src.tools.llm_client import generate_text
@@ -15,23 +16,8 @@ from src.tools.supabase_client import get_db
 logger = structlog.get_logger()
 router = APIRouter()
 
-api_key_header = APIKeyHeader(name="X-API-Key")
 _ROOT = Path(__file__).resolve().parents[4]
 PROMPT_PATH = _ROOT / "prompts" / "copilot_v1.md"
-
-
-async def verify_api_key(api_key: str = Security(api_key_header)) -> str:
-    if api_key != settings.api_key:
-        logger.warning("copilot_auth_failed")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API Key",
-        )
-    return api_key
-
-
-def _vector_to_pg(vector: list[float]) -> str:
-    return "[" + ",".join(str(v) for v in vector) + "]"
 
 
 def _load_prompt_template() -> str:
@@ -73,7 +59,7 @@ async def ask_copilot(
 
     try:
         query_embedding = await cohere_client.embed_query(question)
-        embedding_pg = _vector_to_pg(query_embedding)
+        embedding_pg = vector_to_pg(query_embedding)
 
         pool = await get_db()
         async with pool.acquire() as conn:

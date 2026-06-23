@@ -44,21 +44,35 @@ Sistema de clasificación automática de feedback de clientes con LangGraph, Fas
 
 ```bash
 cp .env.example .env
-# Completar DB_DSN, SUPABASE_URL, SUPABASE_KEY, GEMINI_API_KEY, COHERE_API_KEY, API_KEY
-# Opcional: GROQ_API_KEY (fallback LLM)
+# Completar SOLO en .env local (nunca commitear — ver docs/guides/seguridad-y-secretos.md)
 pip install -r requirements.txt
 ```
 
-Variables clave en `.env`:
+Variables en `.env` (plantilla en [`.env.example`](.env.example)):
 
 | Variable | Uso |
 |----------|-----|
 | `DB_DSN` | FastAPI + worker (Session pooler Supabase) |
-| `API_KEY` | Header `X-API-Key` para n8n y dashboard |
-| `GROQ_API_KEY` | Fallback LLM (clasificador, patrones, Copilot) |
-| `FASTAPI_INGEST_URL` | URL que usa n8n Docker → `http://host.docker.internal:8000/ingest` |
+| `GEMINI_API_KEY` | Clasificador, patrones, Copilot |
+| `COHERE_API_KEY` | Embeddings RAG |
+| `API_KEY` | Header `X-API-Key` — generar con `openssl rand -hex 32` |
+| `GROQ_API_KEY` | Fallback LLM (opcional, recomendado) |
+| `SUPABASE_URL` / `SUPABASE_KEY` | Dashboard |
+| `FASTAPI_INGEST_URL` | n8n Docker → `http://host.docker.internal:8000/ingest` |
 | `FASTAPI_URL` | Dashboard/Copilot → `http://localhost:8000` |
-| `WEBHOOK_URL` | Base pública HTTPS para Meta/WhatsApp (ngrok en local) |
+| `WEBHOOK_URL` | Base HTTPS pública para Meta/WhatsApp (ngrok en local) |
+
+### Optimización LLM (worker)
+
+| Variable | Default | Descripción |
+|----------|---------|-------------|
+| `CLASSIFY_LLM_BATCH_SIZE` | 8 | Mensajes por llamada (`1` = 1-a-1) |
+| `CLASSIFY_MAX_TEXT_CHARS` | 300 | Textos largos van solos |
+| `GEMINI_CONCURRENCY` | 3 | Chunks en paralelo |
+| `GEMINI_CACHE_ENABLED` | true | Caché explícito Gemini (Fase B) |
+| `GEMINI_CACHE_VERSION` | v2-fewshot1 | Cambiar al editar prompts cacheados |
+
+Detalle: [docs/plans/optimizacion-llm-fase-a.md](docs/plans/optimizacion-llm-fase-a.md) · [Fase B](docs/plans/optimizacion-llm-fase-b.md) · [Micro-batch](docs/plans/optimizacion-llm-microbatch.md)
 
 Aplicar schema en Supabase SQL Editor:
 
@@ -206,7 +220,9 @@ El diseño del sistema está documentado en [Architecture Decision Records](docs
 ### Más recursos
 
 - [Guías operativas](docs/guides/) — n8n, Tally, Forms, BI
+- [Seguridad y secretos](docs/guides/seguridad-y-secretos.md) — qué no subir a Git
 - [Base de datos](docs/database/) — schema y migraciones
+- [Optimización LLM](docs/plans/optimizacion-llm-fase-a.md) — fases A–D implementadas
 
 ## Formato CSV para carga manual
 
@@ -216,12 +232,36 @@ texto,fuente,external_id
 "Muy buen servicio",csv,
 ```
 
-Columnas: `texto` (obligatorio), `fuente` (opcional, default `csv`), `external_id` (opcional, se genera UUID).
+| Columna | Obligatorio | Alias aceptados |
+|---------|-------------|-----------------|
+| `texto` | Sí | `content`, `message`, `comentario`, `text` |
+| `fuente` | No (default `csv`) | `source` |
+| `external_id` | No (UUID auto) | — |
+
+También soporta **JSON** y **Excel** (`.xlsx`/`.xls`). En Excel se usa la **primera hoja con datos** que tenga columna `texto` o `content` (ignora hojas tipo LÉEME/readme).
+
+Datasets de prueba locales: carpeta `Data/` (no versionada — ver `.gitignore`). Plantilla versionada: [`samples/plantilla_feedback.csv`](samples/plantilla_feedback.csv).
+
+## Operaciones — reencolar errores
+
+Si mensajes quedan en estado `error` (p. ej. rate limit 429 de Gemini/Groq):
+
+```bash
+cd backend && python scripts/requeue_errors.py
+```
+
+Revisa los logs del worker tras reencolar. El dashboard muestra el conteo en la barra de estado y el banner de salud.
+
+## Seguridad
+
+- **No commitear** `.env` ni datasets locales (`Data/`).
+- Plantillas: `.env.example`, `.env.production.example` (sin valores reales).
+- Guía completa: [docs/guides/seguridad-y-secretos.md](docs/guides/seguridad-y-secretos.md)
 
 ## Tests
 
 ```bash
-PYTHONPATH=backend .venv/bin/pytest tests/ -v
+PYTHONPATH=backend:. .venv/bin/pytest tests/ -v
 ```
 
 ## Estructura del proyecto
@@ -229,8 +269,10 @@ PYTHONPATH=backend .venv/bin/pytest tests/ -v
 ```
 backend/src/     # FastAPI, LangGraph, RAG
 dashboard/       # Streamlit
-n8n/             # Workflows exportados
-prompts/         # Prompts Gemini
+shared/          # Constantes compartidas (ingesta CSV)
+samples/         # Plantillas de ejemplo (sin datos reales)
+n8n/             # Workflows exportados (sin API keys embebidas)
+prompts/         # Prompts LLM (system, few-shot, patrones)
 docs/            # Índice en docs/README.md
-tests/           # Suite pytest
+tests/           # Suite pytest (55+ tests)
 ```

@@ -81,11 +81,6 @@ NAV_GROUPS: dict[str, list[dict[str, str]]] = {
     ],
 }
 
-# Compatibilidad con código que aún use NAV_ITEMS plano
-NAV_ITEMS: list[dict[str, str]] = [
-    item for group in NAV_GROUPS.values() for item in group
-]
-
 PAGE_TITLES: dict[str, tuple[str, str]] = {
     "general": ("Vista General", "Monitoreo de feedback en tiempo casi real"),
     "sentimiento": ("Sentimiento y Categorías", "Distribución emocional y temas recurrentes"),

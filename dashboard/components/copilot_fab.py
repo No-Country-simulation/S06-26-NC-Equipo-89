@@ -51,8 +51,3 @@ def open_dialog_if_needed() -> None:
     """Abre el modal si el usuario lo solicitó."""
     if st.session_state.get("copilot_dialog_open"):
         _copilot_dialog()
-
-
-def render() -> None:
-    """Compatibilidad: solo abre dialog si quedó pendiente."""
-    open_dialog_if_needed()

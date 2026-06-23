@@ -5,37 +5,16 @@
 !.env.example
 !.env.production.example
 
+# Credenciales y claves (nunca versionar)
+*.pem
+*.key
+credentials.json
+service-account*.json
+secrets/
+.secrets/
+
+# ngrok y túneles locales
+ngrok.yml
+.ngrok2/
+
 # Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-.venv/
-venv/
-env/
-*.egg-info/
-dist/
-build/
-.pytest_cache/
-.coverage
-htmlcov/
-.mypy_cache/
-.ruff_cache/
-
-# IDE / editor
-.DS_Store
-.idea/
-.vscode/
-.cursor/
-*.swp
-*.swo
-
-# Logs y temporales
-*.log
-tmp/
-temp/
-
-# Docker / n8n datos locales (volumen nombrado en compose; credenciales OAuth viven aquí)
-n8n_data/
-n8n/.env

@@ -8,9 +8,10 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.feedback_card import feedback_card_html
+from dashboard.components.formatters import format_fecha
 from dashboard.components.ui import empty_state, section_header
 from dashboard.supabase_queries import get_mensajes_por_urgencia, get_urgencia_distribucion
-from dashboard.theme import ALTAIR_THEME, CHART_ACCENT, IMPACT_BADGES
+from dashboard.theme import ALTAIR_THEME, IMPACT_BADGES
 
 alt.theme.enable("default")
 alt.themes.register("fc_urg_theme", lambda: ALTAIR_THEME)
@@ -21,13 +22,6 @@ _URG_COLORS = {
     "Media": IMPACT_BADGES["Media"][1],
     "Baja": IMPACT_BADGES["Baja"][1],
 }
-
-
-def _format_fecha(value: str) -> str:
-    ts = pd.to_datetime(value, errors="coerce")
-    if pd.isna(ts):
-        return str(value or "—")
-    return ts.strftime("%d/%m/%Y %H:%M")
 
 
 def render() -> None:
@@ -114,7 +108,7 @@ def render() -> None:
                 resumen=str(row.get("resumen", "")),
                 texto=str(row.get("texto", "")),
                 categorias=cats,
-                fecha=_format_fecha(row.get("timestamp") or row.get("clasificado_at", "")),
+                fecha=format_fecha(row.get("timestamp") or row.get("clasificado_at", "")),
             ),
             unsafe_allow_html=True,
         )

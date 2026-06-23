@@ -6,8 +6,10 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY dashboard/ /app/dashboard/
+COPY shared/ /app/shared/
 COPY .env.example /app/.env.example
 
+ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8501
