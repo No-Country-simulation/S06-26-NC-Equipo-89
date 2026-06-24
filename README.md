@@ -1,8 +1,24 @@
+<p align="center">
+  <img src="/Banner Github.png" alt="Banner del proyecto" width="100%">
+</p>
+
+<p align="center">
+  <a href="docs/README.md">
+    <img src="https://img.shields.io/badge/📚_Documentación-0F172A?style=for-the-badge&logo=readthedocs&logoColor=38BDF8">
+  </a>
+  <a href="docs/adr/README.md">
+    <img src="https://img.shields.io/badge/🏛️_Arquitectura-1E1B4B?style=for-the-badge&logo=github&logoColor=A78BFA">
+  </a>
+  <a href="docs/estado-implementacion.md">
+    <img src="https://img.shields.io/badge/🚀_Roadmap-111827?style=for-the-badge&logo=rocket&logoColor=22D3EE">
+  </a>
+</p>
+
+
 # Feedback Classifier
 
 Sistema de clasificación automática de feedback de clientes con LangGraph, FastAPI, Supabase, n8n y dashboard Streamlit.
 
-**Documentación:** [docs/](docs/README.md) · **ADRs:** [decisiones de arquitectura](docs/adr/README.md) · **Estado:** [implementación](docs/estado-implementacion.md)
 
 ## Arquitectura
 
