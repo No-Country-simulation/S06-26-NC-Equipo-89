@@ -5,25 +5,17 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components import copilot_fab, health_banner, status_bar
+from dashboard.components.pipeline_status import render as render_pipeline_sidebar
 from dashboard.components.ui import brand_sidebar, inject_styles, page_header
 from dashboard.theme import ASSETS_DIR, PAGE_TITLES
-
-_THEME_KEY = "fc_dark_mode"
 
 
 def init_session() -> None:
     """Estado de sesión global del dashboard."""
     if "copilot_dialog_open" not in st.session_state:
         st.session_state.copilot_dialog_open = False
-    if "theme" not in st.session_state:
-        st.session_state.theme = "light"
-    if _THEME_KEY not in st.session_state:
-        st.session_state[_THEME_KEY] = st.session_state.theme == "dark"
-
-
-def _on_theme_toggle() -> None:
-    st.session_state.theme = "dark" if st.session_state[_THEME_KEY] else "light"
-    st.session_state.copilot_dialog_open = False
+    if "fc_auto_refresh" not in st.session_state:
+        st.session_state.fc_auto_refresh = True
 
 
 def render_sidebar() -> None:
@@ -36,21 +28,22 @@ def render_sidebar() -> None:
         )
         st.divider()
         copilot_fab.render_sidebar_button()
+        render_pipeline_sidebar(compact=True)
 
         st.divider()
-        if st.button("Refrescar datos", use_container_width=True, type="secondary"):
+        if st.button("Refrescar datos", width="stretch", type="secondary"):
             st.cache_data.clear()
             st.rerun()
 
-        st.caption("Los datos se actualizan automáticamente cada 60 segundos.")
+        st.toggle(
+            "Auto-actualizar cada 30 s",
+            key="fc_auto_refresh",
+            help="Actualiza cola y última actividad sin recargar la página",
+        )
+
+        st.caption("Los KPIs y gráficos se refrescan con «Refrescar datos».")
 
         st.divider()
-        st.toggle(
-            "Modo oscuro",
-            key=_THEME_KEY,
-            on_change=_on_theme_toggle,
-        )
-        st.session_state.theme = "dark" if st.session_state[_THEME_KEY] else "light"
 
 
 def render_page_header(seccion_id: str, *, show_health: bool = True) -> None:

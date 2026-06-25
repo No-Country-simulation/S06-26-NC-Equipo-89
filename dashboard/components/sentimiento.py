@@ -63,7 +63,7 @@ def render():
                     )
                     .properties(height=260)
                 )
-                st.altair_chart(chart_dona, use_container_width=True)
+                st.altair_chart(chart_dona, width="stretch")
         except Exception as e:
             st.error(f"Error cargando sentimientos: {e}")
 
@@ -96,6 +96,6 @@ def render():
                     )
                     .properties(height=260)
                 )
-                st.altair_chart(chart_barras, use_container_width=True)
+                st.altair_chart(chart_barras, width="stretch")
         except Exception as e:
             st.error(f"Error cargando categorías: {e}")

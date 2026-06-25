@@ -115,6 +115,6 @@ def render() -> None:
         )
 
     with st.expander("Vista previa (10 filas)"):
-        st.dataframe(filtered.head(10), use_container_width=True)
+        st.dataframe(filtered.head(10), width="stretch")
 
     st.caption("Descarga lista — el archivo incluye solo los registros filtrados.")

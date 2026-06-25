@@ -1,5 +1,8 @@
 """
-Reencola feedback en estado 'error' para que el worker los reprocese.
+Reencola feedback en estado 'error' para reproceso inmediato (sin esperar al worker).
+
+El worker ya reintenta errores automáticamente en cada tick (loader prioriza estado
+'error' antes que 'pendiente'). Usá este script solo para forzar reencolado manual.
 
   cd backend && python scripts/requeue_errors.py
   cd backend && python scripts/requeue_errors.py --external-id ma_561108ea2711

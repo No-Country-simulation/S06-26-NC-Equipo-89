@@ -120,15 +120,15 @@ def render() -> None:
             )
 
         st.markdown("**Vista previa (primeras 5 filas)**")
-        st.dataframe(df.head(), use_container_width=True)
+        st.dataframe(df.head(), width="stretch")
 
         col_back, col_next = st.columns(2)
         with col_back:
-            if st.button("← Volver", use_container_width=True):
+            if st.button("← Volver", width="stretch"):
                 _reset_wizard()
                 st.rerun()
         with col_next:
-            if st.button("Continuar →", type="primary", use_container_width=True):
+            if st.button("Continuar →", type="primary", width="stretch"):
                 st.session_state.upload_step = 3
                 st.rerun()
 
@@ -144,23 +144,24 @@ def render() -> None:
 
         col_back, col_send = st.columns(2)
         with col_back:
-            if st.button("← Volver", use_container_width=True):
+            if st.button("← Volver", width="stretch"):
                 st.session_state.upload_step = 2
                 st.rerun()
         with col_send:
-            if st.button("Enviar a cola de procesamiento", type="primary", use_container_width=True):
+            if st.button("Enviar a cola de procesamiento", type="primary", width="stretch"):
                 if not API_KEY:
                     st.error("API_KEY no configurada en .env")
                     return
 
                 csv_bytes = to_csv_bytes(df)
                 try:
+                    timeout = max(120.0, len(df) * 0.5)
                     with st.spinner("Enviando feedback a FastAPI..."):
                         response = httpx.post(
                             f"{FASTAPI_URL}/ingest/csv",
                             headers={"X-API-Key": API_KEY},
                             files={"file": ("upload.csv", csv_bytes, "text/csv")},
-                            timeout=120.0,
+                            timeout=timeout,
                         )
                         response.raise_for_status()
                         result = response.json()
@@ -177,7 +178,12 @@ def render() -> None:
                     st.error(
                         f"FastAPI no responde en {FASTAPI_URL} — verificar puerto 8000"
                     )
+                except httpx.ReadTimeout:
+                    st.error(
+                        "La carga tardó demasiado. Si el archivo es grande (>500 filas), "
+                        "reintentá en unos segundos o dividí el CSV en lotes más chicos."
+                    )
                 except httpx.HTTPStatusError as e:
                     st.error(f"Error del servidor ({e.response.status_code}): {e.response.text}")
-                except Exception:
-                    st.error("Error inesperado al subir el archivo.")
+                except Exception as e:
+                    st.error(f"Error inesperado al subir el archivo: {e}")

@@ -13,6 +13,36 @@ from supabase import Client, create_client
 load_dotenv()
 
 
+def _is_missing_tick_id_column(exc: BaseException) -> bool:
+    """True si Supabase/PostgREST reporta que tick_id no existe (migración 007 pendiente)."""
+    text = str(exc).lower()
+    return "tick_id" in text and ("42703" in text or "does not exist" in text)
+
+
+@st.cache_data(ttl=300)
+def _schema_has_tick_id() -> bool:
+    """Detecta si migración 007 está aplicada (columna tick_id en feedback_metricas)."""
+    client = get_client()
+    try:
+        client.table("feedback_metricas").select("tick_id").limit(1).execute()
+        return True
+    except Exception as e:
+        if _is_missing_tick_id_column(e):
+            return False
+        raise
+
+
+def schema_migration_hint() -> str | None:
+    """Aviso si falta migración 007 en Supabase."""
+    if _schema_has_tick_id():
+        return None
+    return (
+        "Migración **007** pendiente en Supabase (`tick_id`). "
+        "El dashboard funciona en modo compatible; aplicá "
+        "`docs/database/migrations/007_production_hardening.sql` en el SQL Editor."
+    )
+
+
 @st.cache_resource
 def get_client() -> Client:
     url = os.getenv("SUPABASE_URL", "")
@@ -66,11 +96,12 @@ def get_kpis() -> dict:
         .execute()
     )
 
-    # Patrones del último tick
-    tick_id = get_latest_tick_id()
+    # Patrones del último tick (o todos si migración 007 pendiente)
     patrones_query = client.table("feedback_patrones").select("id", count="exact")
-    if tick_id:
-        patrones_query = patrones_query.eq("tick_id", tick_id)
+    if _schema_has_tick_id():
+        tick_id = get_latest_tick_id()
+        if tick_id:
+            patrones_query = patrones_query.eq("tick_id", tick_id)
     patrones_res = patrones_query.execute()
 
     return {
@@ -173,19 +204,26 @@ def get_mensajes_por_urgencia(urgencia: str | None = None, limit: int = 30) -> l
 
 @st.cache_data(ttl=60)
 def get_latest_tick_id() -> str | None:
-    """tick_id del batch más reciente (métricas o patrones)."""
+    """tick_id del batch más reciente (métricas o patrones). None si migración 007 pendiente."""
+    if not _schema_has_tick_id():
+        return None
     client = get_client()
     for table in ("feedback_metricas", "feedback_patrones"):
-        res = (
-            client.table(table)
-            .select("tick_id, created_at")
-            .not_.is_("tick_id", "null")
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-        if res.data and res.data[0].get("tick_id"):
-            return res.data[0]["tick_id"]
+        try:
+            res = (
+                client.table(table)
+                .select("tick_id, created_at")
+                .not_.is_("tick_id", "null")
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if res.data and res.data[0].get("tick_id"):
+                return res.data[0]["tick_id"]
+        except Exception as e:
+            if _is_missing_tick_id_column(e):
+                return None
+            raise
     return None
 
 
@@ -194,7 +232,7 @@ def get_patrones(impacto_filtro: str | None = None, *, latest_tick_only: bool = 
     """Patrones del agente; por defecto solo el último tick del worker."""
     client = get_client()
     query = client.table("feedback_patrones").select("*").order("created_at", desc=True)
-    if latest_tick_only:
+    if latest_tick_only and _schema_has_tick_id():
         tick_id = get_latest_tick_id()
         if tick_id:
             query = query.eq("tick_id", tick_id)
@@ -224,12 +262,18 @@ def get_clasificados_export() -> list[dict]:
 
 @st.cache_data(ttl=30)
 def get_queue_health() -> dict[str, int]:
-    """Resumen de cola de procesamiento (pendientes + errores)."""
+    """Resumen de cola de procesamiento (pendientes, procesando, errores)."""
     client = get_client()
     pending_res = (
         client.table("feedback_raw")
         .select("id", count="exact")
         .eq("estado", "pendiente")
+        .execute()
+    )
+    processing_res = (
+        client.table("feedback_raw")
+        .select("id", count="exact")
+        .eq("estado", "procesando")
         .execute()
     )
     error_res = (
@@ -240,6 +284,7 @@ def get_queue_health() -> dict[str, int]:
     )
     return {
         "pendientes": pending_res.count or 0,
+        "procesando": processing_res.count or 0,
         "errores": error_res.count or 0,
     }
 
@@ -254,9 +299,96 @@ def get_error_count() -> int:
     return get_queue_health()["errores"]
 
 
+@st.cache_data(ttl=30)
+def get_worker_activity() -> dict:
+    """
+    Señales de actividad del worker para el dashboard.
+
+    Combina cola actual, último tick en feedback_metricas y clasificados recientes.
+    """
+    health = get_queue_health()
+    ultimo = get_ultimo_lote_metricas()
+    client = get_client()
+
+    clas_5m_res = (
+        client.table("feedback_clasificado")
+        .select("id", count="exact")
+        .gte("created_at", _iso_minutes_ago(5))
+        .execute()
+    )
+    clasificados_ultimos_5m = clas_5m_res.count or 0
+
+    ultimo_ciclo_at = ultimo.get("created_at") if ultimo else None
+    datos = (ultimo or {}).get("datos") or {}
+    exitos_ultimo = int(datos.get("total_procesados") or 0)
+    errores_ultimo = int(datos.get("errores_en_lote") or 0)
+    tamano_ultimo = int(datos.get("tamano_lote") or exitos_ultimo + errores_ultimo or 0)
+
+    if health["procesando"] > 0:
+        estado_agente = "procesando"
+    elif ultimo_ciclo_at and _minutes_since(ultimo_ciclo_at) <= _worker_interval_minutes() + 1:
+        estado_agente = "ciclo_reciente"
+    else:
+        estado_agente = "en_espera"
+
+    return {
+        **health,
+        "ultimo_ciclo_at": ultimo_ciclo_at,
+        "exitos_ultimo_ciclo": exitos_ultimo,
+        "errores_ultimo_ciclo": errores_ultimo,
+        "tamano_ultimo_ciclo": tamano_ultimo,
+        "clasificados_ultimos_5m": clasificados_ultimos_5m,
+        "estado_agente": estado_agente,
+        "intervalo_minutos": _worker_interval_minutes(),
+    }
+
+
+def _worker_interval_minutes() -> int:
+    raw = os.getenv("BATCH_INTERVAL_MINUTES", "5")
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 5
+
+
+def _iso_minutes_ago(minutes: int) -> str:
+    from datetime import datetime, timedelta, timezone
+
+    return (datetime.now(timezone.utc) - timedelta(minutes=minutes)).isoformat()
+
+
+def _minutes_since(iso_ts: str) -> int:
+    from datetime import datetime, timezone
+
+    try:
+        ts = datetime.fromisoformat(iso_ts.replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        return int((now - ts).total_seconds() // 60)
+    except (ValueError, TypeError):
+        return 9999
+
+
+def format_relative_iso(iso_ts: str) -> str:
+    """Texto relativo en español para timestamps ISO."""
+    minutes = _minutes_since(iso_ts)
+    if minutes < 1:
+        return "hace un momento"
+    if minutes == 1:
+        return "hace 1 min"
+    if minutes < 60:
+        return f"hace {minutes} min"
+    hours = minutes // 60
+    if hours < 24:
+        return f"hace {hours} h"
+    days = hours // 24
+    return f"hace {days} d"
+
+
 @st.cache_data(ttl=60)
 def get_last_activity_at() -> str | None:
-    """Timestamp ISO del registro más reciente (raw o clasificado)."""
+    """Timestamp ISO del registro más reciente (raw, clasificado o ciclo del worker)."""
     client = get_client()
     raw_res = (
         client.table("feedback_raw")
@@ -272,11 +404,20 @@ def get_last_activity_at() -> str | None:
         .limit(1)
         .execute()
     )
+    metricas_res = (
+        client.table("feedback_metricas")
+        .select("created_at")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
     timestamps: list[str] = []
     if raw_res.data:
         timestamps.append(raw_res.data[0].get("created_at", ""))
     if clas_res.data:
         timestamps.append(clas_res.data[0].get("created_at", ""))
+    if metricas_res.data:
+        timestamps.append(metricas_res.data[0].get("created_at", ""))
     timestamps = [t for t in timestamps if t]
     if not timestamps:
         return None
@@ -287,9 +428,10 @@ def get_last_activity_at() -> str | None:
 def get_ultimo_lote_metricas() -> dict | None:
     """Última fila de feedback_metricas (resumen del batch más reciente)."""
     client = get_client()
+    columns = "datos_metricas, created_at, tick_id" if _schema_has_tick_id() else "datos_metricas, created_at"
     res = (
         client.table("feedback_metricas")
-        .select("datos_metricas, created_at, tick_id")
+        .select(columns)
         .order("created_at", desc=True)
         .limit(1)
         .execute()
@@ -302,6 +444,6 @@ def get_ultimo_lote_metricas() -> dict | None:
         datos = json.loads(datos)
     return {
         "created_at": row.get("created_at"),
-        "tick_id": row.get("tick_id"),
+        "tick_id": row.get("tick_id") if _schema_has_tick_id() else None,
         "datos": datos,
     }

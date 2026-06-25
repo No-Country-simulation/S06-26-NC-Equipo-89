@@ -97,7 +97,7 @@ def _render_suggestions() -> None:
     cols = st.columns(3)
     for i, question in enumerate(SUGGESTED_QUESTIONS):
         with cols[i]:
-            if st.button(question, key=f"copilot_suggest_{i}", use_container_width=True):
+            if st.button(question, key=f"copilot_suggest_{i}", width="stretch"):
                 st.session_state.copilot_pending_question = question
                 st.rerun()
 

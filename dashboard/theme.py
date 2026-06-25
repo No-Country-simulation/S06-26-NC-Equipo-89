@@ -19,14 +19,6 @@ WARNING = "#d97706"
 NEUTRAL = "#94a3b8"
 CHART_ACCENT = "#6366f1"
 
-# ── Paleta (dark) ─────────────────────────────────────────────────────────────
-DARK_SURFACE = "#0f172a"
-DARK_SURFACE_MUTED = "#1e293b"
-DARK_BORDER = "#334155"
-DARK_TEXT = "#f1f5f9"
-DARK_TEXT_MUTED = "#94a3b8"
-DARK_PRIMARY_SOFT = "#1e3a5f"
-
 SENTIMENT_COLORS = {
     "Positivo": SUCCESS,
     "Negativo": DANGER,

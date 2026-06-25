@@ -87,10 +87,13 @@ def test_get_pending_count(mock_get_client):
     mock_get_client.return_value = mock_client
     pending_res = MagicMock()
     pending_res.count = 5
+    processing_res = MagicMock()
+    processing_res.count = 0
     error_res = MagicMock()
     error_res.count = 0
     mock_client.table.return_value.select.return_value.eq.return_value.execute.side_effect = [
         pending_res,
+        processing_res,
         error_res,
     ]
 
@@ -106,15 +109,18 @@ def test_get_queue_health(mock_get_client):
     mock_get_client.return_value = mock_client
     pending_res = MagicMock()
     pending_res.count = 3
+    processing_res = MagicMock()
+    processing_res.count = 2
     error_res = MagicMock()
-    error_res.count = 2
+    error_res.count = 1
     mock_client.table.return_value.select.return_value.eq.return_value.execute.side_effect = [
         pending_res,
+        processing_res,
         error_res,
     ]
 
     get_queue_health.clear()
-    assert get_queue_health() == {"pendientes": 3, "errores": 2}
+    assert get_queue_health() == {"pendientes": 3, "procesando": 2, "errores": 1}
 
 
 @patch("dashboard.supabase_queries.get_client")
@@ -128,14 +134,45 @@ def test_get_last_activity_at(mock_get_client):
     raw_res.data = [{"created_at": "2026-06-10T10:00:00Z"}]
     clas_res = MagicMock()
     clas_res.data = [{"created_at": "2026-06-15T12:00:00Z"}]
+    metricas_res = MagicMock()
+    metricas_res.data = [{"created_at": "2026-06-14T08:00:00Z"}]
 
     mock_client.table.return_value.select.return_value.order.return_value.limit.return_value.execute.side_effect = [
         raw_res,
         clas_res,
+        metricas_res,
     ]
 
     get_last_activity_at.clear()
     assert get_last_activity_at() == "2026-06-15T12:00:00Z"
+
+
+@patch("dashboard.supabase_queries.get_ultimo_lote_metricas")
+@patch("dashboard.supabase_queries.get_queue_health")
+@patch("dashboard.supabase_queries.get_client")
+def test_get_worker_activity(mock_get_client, mock_queue, mock_ultimo):
+    from dashboard.supabase_queries import get_worker_activity
+
+    mock_queue.return_value = {"pendientes": 2, "procesando": 0, "errores": 5}
+    mock_ultimo.return_value = {
+        "created_at": "2026-06-16T12:00:00+00:00",
+        "datos": {
+            "total_procesados": 0,
+            "errores_en_lote": 50,
+            "tamano_lote": 50,
+        },
+    }
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    clas_res = MagicMock()
+    clas_res.count = 0
+    mock_client.table.return_value.select.return_value.gte.return_value.execute.return_value = clas_res
+
+    get_worker_activity.clear()
+    activity = get_worker_activity()
+    assert activity["errores_ultimo_ciclo"] == 50
+    assert activity["tamano_ultimo_ciclo"] == 50
+    assert activity["estado_agente"] in ("ciclo_reciente", "en_espera")
 
 
 def test_count_skipped_rows():

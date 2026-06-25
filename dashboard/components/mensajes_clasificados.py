@@ -84,15 +84,23 @@ def render() -> None:
     m4.metric("Revisar (conf. < 70%)", low_conf, help="Clasificaciones que conviene validar manualmente")
 
     st.markdown("---")
-    st.markdown("**Filtros**")
-    filtered = _apply_filters(df)
-    st.caption(f"Mostrando {len(filtered)} de {len(df)} mensajes")
+    with st.expander("Filtros", expanded=False):
+        filtered = _apply_filters(df)
+
+    limit = st.select_slider(
+        "Mensajes por página",
+        options=[10, 25, 50, 100],
+        value=25,
+        key="msg_page_size",
+    )
+    st.caption(f"Mostrando {min(len(filtered), limit)} de {len(filtered)} (total {len(df)})")
 
     if filtered.empty:
         empty_state("Ningún mensaje coincide con los filtros.")
         return
 
-    for _, row in filtered.iterrows():
+    page_slice = filtered.head(limit)
+    for _, row in page_slice.iterrows():
         cats = row.get("categorias", [])
         if not isinstance(cats, list):
             cats = [cats] if cats else []
@@ -112,3 +120,6 @@ def render() -> None:
             ),
             unsafe_allow_html=True,
         )
+
+    if len(filtered) > limit:
+        st.info(f"Hay {len(filtered) - limit} mensajes más. Subí «Mensajes por página» o acotá con filtros.")

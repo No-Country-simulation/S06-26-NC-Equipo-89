@@ -21,6 +21,20 @@ INSERT_QUERY = """
     ON CONFLICT (external_id) DO NOTHING
 """
 
+BULK_INSERT_CSV = """
+    INSERT INTO feedback_raw (external_id, fuente, texto, timestamp, metadata, estado)
+    SELECT external_id, fuente, texto, ts, metadata, 'pendiente'
+    FROM UNNEST(
+        $1::text[],
+        $2::text[],
+        $3::text[],
+        $4::timestamptz[],
+        $5::jsonb[]
+    ) AS t(external_id, fuente, texto, ts, metadata)
+    ON CONFLICT (external_id) DO NOTHING
+    RETURNING external_id
+"""
+
 
 @router.post("/ingest", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_feedback(
@@ -85,30 +99,38 @@ async def ingest_csv(
     inserted = 0
     skipped = 0
     now = datetime.now(timezone.utc)
+    metadata_obj = {"source": "csv_upload", "filename": file.filename}
 
-    async with db.acquire() as conn:
-        async with conn.transaction():
-            for row in reader:
-                texto = pick_field(row, TEXT_FIELD_ALIASES)
-                if not texto:
-                    skipped += 1
-                    continue
+    external_ids: list[str] = []
+    fuentes: list[str] = []
+    textos: list[str] = []
+    timestamps: list[datetime] = []
+    metadatas: list[str] = []
 
-                external_id = pick_field(row, ("external_id",)) or f"csv-{uuid.uuid4()}"
-                fuente = pick_field(row, SOURCE_FIELD_ALIASES) or "csv"
+    for row in reader:
+        texto = pick_field(row, TEXT_FIELD_ALIASES)
+        if not texto:
+            skipped += 1
+            continue
 
-                result = await conn.execute(
-                    INSERT_QUERY,
-                    external_id,
-                    fuente,
-                    texto,
-                    now,
-                    json.dumps({"source": "csv_upload", "filename": file.filename}),
-                )
-                if result == "INSERT 0":
-                    skipped += 1
-                else:
-                    inserted += 1
+        external_ids.append(pick_field(row, ("external_id",)) or f"csv-{uuid.uuid4()}")
+        fuentes.append(pick_field(row, SOURCE_FIELD_ALIASES) or "csv")
+        textos.append(texto)
+        timestamps.append(now)
+        metadatas.append(json.dumps(metadata_obj))
 
-    logger.info("ingest_csv_done", inserted=inserted, skipped=skipped)
+    if external_ids:
+        async with db.acquire() as conn:
+            rows = await conn.fetch(
+                BULK_INSERT_CSV,
+                external_ids,
+                fuentes,
+                textos,
+                timestamps,
+                metadatas,
+            )
+        inserted = len(rows)
+        skipped += len(external_ids) - inserted
+
+    logger.info("ingest_csv_done", inserted=inserted, skipped=skipped, total=len(external_ids) + skipped)
     return {"status": "success", "inserted": inserted, "skipped": skipped}

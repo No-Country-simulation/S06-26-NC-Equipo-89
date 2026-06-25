@@ -10,7 +10,7 @@ def render_sidebar_button() -> None:
     if st.button(
         "Copilot — Asistente IA",
         type="primary",
-        use_container_width=True,
+        width="stretch",
         key="copilot_launch_sidebar",
     ):
         st.session_state.copilot_dialog_open = True
@@ -42,7 +42,7 @@ def _copilot_dialog() -> None:
 
     foot_col, clear_col = st.columns([3, 1])
     with clear_col:
-        if st.button("Limpiar conversación", use_container_width=True, type="secondary"):
+        if st.button("Limpiar conversación", width="stretch", type="secondary"):
             st.session_state.copilot_messages = []
             st.rerun()
 

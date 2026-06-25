@@ -48,4 +48,5 @@ async def test_loader_uses_skip_locked_query(mock_pool):
 
     query = conn.fetch.await_args[0][0]
     assert "SKIP LOCKED" in query
-    assert "estado = 'pendiente'" in query
+    assert "estado IN ('error', 'pendiente')" in query
+    assert "WHEN estado = 'error' THEN 0" in query

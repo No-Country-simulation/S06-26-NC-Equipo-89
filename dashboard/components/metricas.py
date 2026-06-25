@@ -5,7 +5,7 @@ Muestra 4 tarjetas de métricas en la parte superior del dashboard.
 import streamlit as st
 
 from dashboard.components.ui import metric_card, section_header, skeleton_metrics
-from dashboard.supabase_queries import get_kpis, get_ultimo_lote_metricas
+from dashboard.supabase_queries import get_kpis, get_ultimo_lote_metricas, schema_migration_hint
 
 
 def _batch_delta(ultimo: dict | None, key: str, subkey: str | None = None) -> str | None:
@@ -42,6 +42,10 @@ def render():
         return
 
     placeholder.empty()
+    hint = schema_migration_hint()
+    if hint:
+        st.warning(hint)
+
     col1, col2, col3, col4 = st.columns(4)
 
     neg_pct = kpis["pct_negativos"]
@@ -91,18 +95,23 @@ def render():
     if ultimo and ultimo.get("datos"):
         datos = ultimo["datos"]
         st.markdown("---")
-        section_header("Último lote procesado")
-        c1, c2, c3 = st.columns(3)
+        section_header("Último ciclo del agente")
+        if ultimo.get("created_at"):
+            st.caption(f"Registrado {format_relative_iso(ultimo['created_at'])}")
+        c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.metric("Mensajes en lote", datos.get("total_procesados", 0))
+            st.metric("Tamaño del lote", datos.get("tamano_lote", datos.get("total_procesados", 0)))
         with c2:
-            sent = datos.get("sentimientos", {})
-            st.caption(
-                f"Positivo: {sent.get('Positivo', 0)} · "
-                f"Negativo: {sent.get('Negativo', 0)} · "
-                f"Neutral: {sent.get('Neutral', 0)}"
-            )
+            st.metric("Clasificados OK", datos.get("total_procesados", 0))
         with c3:
+            st.metric("Fallidos en ciclo", datos.get("errores_en_lote", 0))
+        with c4:
+            sent = datos.get("sentimientos", {})
+            st.metric(
+                "Negativos (lote)",
+                sent.get("Negativo", 0),
+            )
+        if datos.get("urgencias"):
             urg = datos.get("urgencias", {})
             st.caption(
                 f"Urgencia alta: {urg.get('Alta', 0)} · "

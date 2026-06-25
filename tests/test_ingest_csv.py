@@ -11,7 +11,7 @@ from src.tools.supabase_client import get_db
 @pytest.fixture
 def client(mock_pool):
     pool, conn = mock_pool
-    conn.execute = AsyncMock(return_value="INSERT 1")
+    conn.fetch = AsyncMock(return_value=[{"external_id": "x1"}, {"external_id": "x2"}])
 
     async def _override_get_db():
         return pool
@@ -32,6 +32,9 @@ def test_ingest_csv_rejects_without_api_key(client):
 
 def test_ingest_csv_parses_rows(client, api_key, mock_pool):
     pool, conn = mock_pool
+    conn.fetch = AsyncMock(
+        return_value=[{"external_id": "a"}, {"external_id": "b"}]
+    )
     csv_content = "texto,fuente\nMensaje uno,csv\nMensaje dos,csv\n"
     response = client.post(
         "/ingest/csv",
@@ -42,7 +45,7 @@ def test_ingest_csv_parses_rows(client, api_key, mock_pool):
     data = response.json()
     assert data["inserted"] == 2
     assert data["skipped"] == 0
-    assert conn.execute.await_count == 2
+    conn.fetch.assert_awaited_once()
 
 
 def test_ingest_csv_requires_texto_column(client, api_key):
@@ -58,6 +61,7 @@ def test_ingest_csv_requires_texto_column(client, api_key):
 
 def test_ingest_csv_skips_empty_texto(client, api_key, mock_pool):
     pool, conn = mock_pool
+    conn.fetch = AsyncMock(return_value=[{"external_id": "a"}])
     csv_content = "texto,fuente\n,csv\nHola,csv\n"
     response = client.post(
         "/ingest/csv",
@@ -72,6 +76,7 @@ def test_ingest_csv_skips_empty_texto(client, api_key, mock_pool):
 
 def test_ingest_csv_accepts_content_and_source_aliases(client, api_key, mock_pool):
     pool, conn = mock_pool
+    conn.fetch = AsyncMock(return_value=[{"external_id": "a"}])
     csv_content = "content,source\nHello from alias,whatsapp\n"
     response = client.post(
         "/ingest/csv",
@@ -82,4 +87,4 @@ def test_ingest_csv_accepts_content_and_source_aliases(client, api_key, mock_poo
     data = response.json()
     assert data["inserted"] == 1
     assert data["skipped"] == 0
-    assert conn.execute.await_count == 1
+    conn.fetch.assert_awaited_once()

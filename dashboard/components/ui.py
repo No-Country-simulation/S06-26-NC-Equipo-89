@@ -8,15 +8,10 @@ from dashboard.theme import SOURCE_BADGES, STYLES_DIR
 
 
 def inject_styles() -> None:
-    """Inyecta CSS global del design system y tema activo."""
+    """Inyecta CSS global del design system."""
     css_path = STYLES_DIR / "custom.css"
-    theme = st.session_state.get("theme", "light")
     if css_path.exists():
         st.markdown(f"<style>{css_path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
-    st.markdown(
-        f'<script>document.documentElement.setAttribute("data-theme","{theme}");</script>',
-        unsafe_allow_html=True,
-    )
 
 
 def page_header(title: str, subtitle: str | None = None) -> None:

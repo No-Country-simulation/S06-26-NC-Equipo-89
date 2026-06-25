@@ -16,12 +16,14 @@ def render(*, show_fastapi: bool = True) -> None:
         show_fastapi: Si False, omite aviso FastAPI (p.ej. páginas sin API).
     """
     pending = 0
+    processing = 0
     errors = 0
     supabase_ok = True
 
     try:
         health = get_queue_health()
         pending = health["pendientes"]
+        processing = health.get("procesando", 0)
         errors = health["errores"]
     except EnvironmentError as e:
         supabase_ok = False
@@ -36,8 +38,15 @@ def render(*, show_fastapi: bool = True) -> None:
         label = "mensaje" if errors == 1 else "mensajes"
         st.error(
             f"**{errors} {label} con error de clasificación** — "
-            "reencolá con `cd backend && python scripts/requeue_errors.py` "
-            "y revisá los logs del worker (429 Gemini/Groq)."
+            "el agente los reintenta automáticamente cada ~5 min "
+            "(prioridad sobre pendientes). Si persisten, revisá cuota Gemini/Groq "
+            "en los logs del worker."
+        )
+
+    if processing > 0:
+        label = "mensaje" if processing == 1 else "mensajes"
+        st.info(
+            f"**{processing} {label} en procesamiento** — el worker los está clasificando ahora."
         )
 
     if pending > 0:

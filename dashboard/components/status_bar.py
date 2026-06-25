@@ -1,4 +1,4 @@
-"""Barra de contexto — última actualización y cola pendiente."""
+"""Barra de contexto — última actualización, cola y auto-refresh."""
 
 from __future__ import annotations
 
@@ -6,7 +6,10 @@ from datetime import datetime, timezone
 
 import streamlit as st
 
-from dashboard.supabase_queries import get_last_activity_at, get_queue_health
+from dashboard.components.pipeline_status import render as render_pipeline
+from dashboard.components.worker_activity import render as render_worker_activity
+from dashboard.health import check_fastapi_health
+from dashboard.supabase_queries import get_last_activity_at, get_queue_health, get_worker_activity
 
 
 def _format_relative(iso_ts: str) -> str:
@@ -31,31 +34,43 @@ def _format_relative(iso_ts: str) -> str:
         return "desconocida"
 
 
+def _clear_live_caches() -> None:
+    get_queue_health.clear()
+    get_worker_activity.clear()
+    get_last_activity_at.clear()
+    check_fastapi_health.clear()
+
+
+def _render_content() -> None:
+    """Contenido de la barra de estado."""
+    render_worker_activity(show_delta=True)
+
+    col_meta, col_pipe = st.columns([1.2, 1])
+    with col_meta:
+        try:
+            last_at = get_last_activity_at()
+            if last_at:
+                st.caption(f"Última actividad en BD: {_format_relative(last_at)}")
+            else:
+                st.caption("Sin actividad registrada aún")
+        except EnvironmentError:
+            st.caption("Supabase no configurado")
+        except Exception:
+            st.caption("No se pudo obtener la última actualización")
+
+    with col_pipe:
+        render_pipeline(compact=True)
+
+
+@st.fragment(run_every=30)
+def _live_status_fragment() -> None:
+    _clear_live_caches()
+    _render_content()
+
+
 def render() -> None:
-    """Muestra última actividad y badge de pendientes."""
-    parts: list[str] = []
-
-    try:
-        last_at = get_last_activity_at()
-        if last_at:
-            parts.append(f"Última actualización: {_format_relative(last_at)}")
-        else:
-            parts.append("Sin actividad registrada aún")
-    except EnvironmentError:
-        parts.append("Supabase no configurado")
-    except Exception:
-        parts.append("No se pudo obtener la última actualización")
-
-    try:
-        health = get_queue_health()
-        pending = health["pendientes"]
-        if pending > 0:
-            parts.append(f"⏳ {pending} en cola")
-        errors = health["errores"]
-        if errors > 0:
-            parts.append(f"⚠ {errors} con error")
-    except Exception:
-        pass
-
-    if parts:
-        st.caption(" · ".join(parts))
+    """Muestra barra de contexto; auto-refresh cada 30 s si está activo."""
+    if st.session_state.get("fc_auto_refresh", True):
+        _live_status_fragment()
+    else:
+        _render_content()

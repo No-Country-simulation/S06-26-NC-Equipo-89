@@ -68,7 +68,7 @@ def render() -> None:
             )
             .properties(height=180)
         )
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, width="stretch")
 
     st.markdown("---")
     nivel = st.radio(
