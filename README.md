@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="/Banner Github.png" alt="Banner del proyecto" width="100%">
+  <img src="docs//Banner Github.png" alt="Banner del proyecto" width="100%">
 </p>
 
 <p align="center">
@@ -23,33 +23,22 @@ Sistema de clasificación automática de feedback de clientes con LangGraph, Fas
 ## Arquitectura
 
 <p align="center">
-  <img src="/Arquitectura.png" alt="Banner del proyecto" width="100%">
+  <img src="docs/Arqui.png" alt="Banner del proyecto" width="100%">
 </p>
 
 
 
-```
-WhatsApp / Tally / Google Forms ──► n8n (normaliza JSON)
-CSV manual ──► Streamlit ──► FastAPI /ingest/csv
-                                      │
-                                      ▼
-                               feedback_raw (Supabase)
-                                      │
-                               worker.py (LangGraph + embeddings Cohere)
-                                      │
-                    ┌─────────────────┼─────────────────┐
-                    ▼                 ▼                 ▼
-           feedback_clasificado  feedback_patrones  feedback_metricas
-                    │
-              Copilot RAG (/copilot/ask) — Gemini con fallback Groq
-```
 
 ## Requisitos
 
-- Python 3.12+
-- Docker (para n8n)
-- Cuenta Supabase, Gemini API, Cohere API
-- Groq API (opcional, fallback cuando Gemini devuelve 503/429)
+| Requisito            | Descripción                                                                                                       | Obligatorio |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------- | :---------: |
+| **Python 3.12+**     | Lenguaje principal para el backend (FastAPI, LangGraph y procesamiento de IA).                                    |      ✅      |
+| **Docker**           | Necesario para ejecutar **n8n** en un contenedor y simplificar el despliegue.                                     |      ✅      |
+| **Supabase Account** | Base de datos PostgreSQL con Row Level Security (RLS) y almacenamiento del feedback.                              |      ✅      |
+| **Gemini API**       | Modelo principal para la clasificación de feedback y generación de respuestas.                                    |      ✅      |
+| **Cohere API**       | Generación de embeddings para búsqueda semántica y RAG.                                                           |      ✅      |
+| **Groq API**         | Fallback opcional cuando Gemini responde con errores **503** o **429**, mejorando la disponibilidad del servicio. | ⚠️ Opcional |
 
 ## Configuración
 
