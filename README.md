@@ -22,6 +22,12 @@ Sistema de clasificación automática de feedback de clientes con LangGraph, Fas
 
 ## Arquitectura
 
+<p align="center">
+  <img src="/Arquitectura.png" alt="Banner del proyecto" width="100%">
+</p>
+
+
+
 ```
 WhatsApp / Tally / Google Forms ──► n8n (normaliza JSON)
 CSV manual ──► Streamlit ──► FastAPI /ingest/csv
