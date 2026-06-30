@@ -190,7 +190,7 @@ def test_sample_csv_template():
     assert "ejemplo-001" in content
 
 
-@patch("dashboard.supabase_queries.get_latest_tick_id", return_value="tick-abc")
+@patch("dashboard.supabase_queries._latest_tick_id_con_patrones", return_value="tick-abc")
 @patch("dashboard.supabase_queries.get_client")
 def test_get_patrones_filters_by_latest_tick(mock_get_client, _mock_tick):
     from dashboard.supabase_queries import get_patrones

@@ -26,7 +26,8 @@ class _AsyncCM:
 
 @pytest.fixture
 def api_key():
-    return "test-api-key"
+    # Debe coincidir con settings.api_key (env API_KEY), tanto en local como en CI.
+    return os.environ.get("API_KEY", "test-api-key")
 
 
 @pytest.fixture
