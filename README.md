@@ -73,13 +73,15 @@ Variables en `.env` (plantilla en [`.env.example`](.env.example)):
 | `GEMINI_CONCURRENCY` | 3 | Chunks en paralelo |
 | `GEMINI_CACHE_ENABLED` | true | Caché explícito Gemini (Fase B) |
 | `GEMINI_CACHE_VERSION` | v3-taxonomia1 | Cambiar al editar prompts cacheados |
+| `RECURRING_TOPICS_INTERVAL_DAYS` | 1 | Job temas recurrentes (0 = off) |
+| `RECURRING_TOPICS_PERIOD_DAYS` | 7 | Ventana histórica de análisis |
 
 Detalle: [docs/plans/optimizacion-llm.md](docs/plans/optimizacion-llm.md)
 
 Aplicar schema en Supabase SQL Editor:
 
 1. [`docs/database/supabase_schema.sql`](docs/database/supabase_schema.sql) (schema completo)
-2. Si ya tenías tablas creadas, aplicar migraciones en orden: [006](docs/database/migrations/006_schema_hardening.sql) → [007](docs/database/migrations/007_production_hardening.sql) → [008](docs/database/migrations/008_acciones_y_revision.sql) → [009](docs/database/migrations/009_correcciones_humanas.sql) → [010](docs/database/migrations/010_motivo_revision.sql)
+2. Si ya tenías tablas creadas, aplicar migraciones en orden: [006](docs/database/migrations/006_schema_hardening.sql) → [007](docs/database/migrations/007_production_hardening.sql) → [008](docs/database/migrations/008_acciones_y_revision.sql) → [009](docs/database/migrations/009_correcciones_humanas.sql) → [010](docs/database/migrations/010_motivo_revision.sql) → [011](docs/database/migrations/011_temas_recurrentes.sql)
 
 ## Levantar en local
 
@@ -138,7 +140,7 @@ cd backend && ../.venv/bin/python embed_job.py
 
 ### Dashboard Streamlit (v3)
 
-Navegación: **Vista General**, **Acciones sugeridas**, **Revisar clasificaciones**, Sentimiento, Urgencia, Mensajes Clasificados, Patrones, Exportar, Carga. Copilot IA en sidebar. Auto-refresh de cola cada 30 s.
+Navegación: **Vista General**, **Acciones sugeridas**, **Revisar clasificaciones**, Sentimiento, Urgencia, Mensajes Clasificados, Patrones, **Temas Recurrentes**, Exportar, Carga. Copilot IA en sidebar. Auto-refresh de cola cada 30 s.
 
 Extensiones: [plan-clasificador-automejora.md](docs/plans/plan-clasificador-automejora.md)
 
@@ -274,7 +276,7 @@ docker compose -f docker-compose.prod.yml --env-file /path/to/.env up -d
 
 ### Checklist go-live
 
-1. Migraciones **007**, **008** y **009** aplicadas en Supabase prod
+1. Migraciones **007**, **008**, **009**, **010** y **011** aplicadas en Supabase prod
 2. `API_KEY` rotada (`openssl rand -hex 32`) y `ENV=production`
 3. Dashboard con rol `dashboard_readonly` + `DASHBOARD_READONLY=true`
 4. Proxy TLS + Basic Auth delante del dashboard ([guía](docs/guides/dashboard-proxy-auth.md))
@@ -306,7 +308,7 @@ samples/         # Plantillas de ejemplo (sin datos reales)
 n8n/             # Workflows exportados (sin API keys embebidas)
 prompts/         # Prompts LLM (system, few-shot, patrones)
 docs/            # Índice en docs/README.md
-tests/           # Suite pytest (70+ tests)
+tests/           # Suite pytest (79+ tests)
 .github/         # CI: ruff + pytest + gitleaks
 docker-compose.prod.yml  # Despliegue producción
 ```

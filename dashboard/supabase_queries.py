@@ -717,3 +717,41 @@ def get_ultimo_consistency_run() -> dict | None:
         if datos.get("tipo") == "consistency_run":
             return {"created_at": row.get("created_at"), "datos": datos}
     return None
+
+
+@st.cache_data(ttl=300)
+def get_temas_recurrentes() -> dict | None:
+    """
+    Último análisis de temas recurrentes guardado en feedback_temas_recurrentes.
+    Retorna dict con claves: created_at, periodo_dias, temas (list), resumen_llm.
+    """
+    client = get_client()
+    try:
+        res = (
+            client.table("feedback_temas_recurrentes")
+            .select("id, periodo_dias, temas, resumen_llm, created_at")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    except Exception as e:
+        if "feedback_temas_recurrentes" in str(e).lower() and (
+            "does not exist" in str(e).lower() or "42P01" in str(e)
+        ):
+            return None
+        raise
+
+    if not res.data:
+        return None
+
+    row = res.data[0]
+    temas = row.get("temas") or []
+    if isinstance(temas, str):
+        temas = json.loads(temas)
+
+    return {
+        "created_at": row.get("created_at"),
+        "periodo_dias": row.get("periodo_dias", 7),
+        "temas": temas,
+        "resumen_llm": row.get("resumen_llm"),
+    }

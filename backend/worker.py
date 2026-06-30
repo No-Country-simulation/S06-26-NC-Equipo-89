@@ -82,6 +82,70 @@ async def consistency_job() -> None:
         await asyncio.sleep(60 * 60 * 24)
 
 
+async def _last_recurring_topics_run_days() -> float | None:
+    """Devuelve días desde el último análisis de temas recurrentes, o None si nunca corrió."""
+    try:
+        async with db_client.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT created_at FROM feedback_temas_recurrentes
+                ORDER BY created_at DESC LIMIT 1
+                """
+            )
+        if not row:
+            return None
+        delta = datetime.now(timezone.utc) - row["created_at"].replace(tzinfo=timezone.utc)
+        return delta.total_seconds() / 86400
+    except Exception as e:
+        logger.warning("recurring_topics_last_run_error", error=str(e))
+        return None
+
+
+async def recurring_topics_job() -> None:
+    """
+    Job paralelo: corre recurring_topics_job cada RECURRING_TOPICS_INTERVAL_DAYS días.
+    Desactivar con RECURRING_TOPICS_INTERVAL_DAYS=0.
+    """
+    interval_days = settings.recurring_topics_interval_days
+    if interval_days <= 0:
+        logger.info("recurring_topics_job_disabled")
+        return
+
+    await asyncio.sleep(90)  # Arranca ligeramente después que el consistency_job
+
+    while True:
+        try:
+            days_since = await _last_recurring_topics_run_days()
+            should_run = days_since is None or days_since >= interval_days
+
+            if should_run:
+                logger.info(
+                    "recurring_topics_auto_start",
+                    days_since=days_since,
+                    period_days=settings.recurring_topics_period_days,
+                )
+                from scripts.recurring_topics_job import run_recurring_topics
+
+                result = await run_recurring_topics(
+                    periodo_dias=settings.recurring_topics_period_days,
+                    save=True,
+                )
+                logger.info(
+                    "recurring_topics_auto_done",
+                    total_temas=len(result.get("temas", [])),
+                )
+            else:
+                logger.info(
+                    "recurring_topics_auto_skip",
+                    days_since=round(days_since, 1),
+                    next_in_days=round(interval_days - days_since, 1),
+                )
+        except Exception as e:
+            logger.error("recurring_topics_job_error", error=str(e))
+
+        await asyncio.sleep(60 * 60 * 24)
+
+
 async def run_worker_loop():
     """
     Bucle principal del Agente. Corre en segundo plano independientemente
@@ -94,8 +158,9 @@ async def run_worker_loop():
 
     await gemini_client.warm_classification_cache()
 
-    # Job de consistency check en paralelo (no bloquea clasificación)
+    # Jobs paralelos — no bloquean la clasificación principal
     asyncio.create_task(consistency_job())
+    asyncio.create_task(recurring_topics_job())
 
     try:
         while True:

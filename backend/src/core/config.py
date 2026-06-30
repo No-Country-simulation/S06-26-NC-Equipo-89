@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     consistency_check_interval_days: int = 7
     consistency_check_runs: int = 3
     consistency_check_stability_threshold: float = 0.70
+    recurring_topics_interval_days: int = 1   # 0 = desactivado
+    recurring_topics_period_days: int = 7     # ventana de análisis histórico
 
     model_config = SettingsConfigDict(
         env_file=(str(_ROOT_ENV), str(_BACKEND_ENV), ".env"),

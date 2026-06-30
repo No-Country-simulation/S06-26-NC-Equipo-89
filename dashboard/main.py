@@ -11,7 +11,7 @@ import streamlit as st
 
 from dashboard.components import copilot_fab
 from dashboard.layout import render_sidebar, setup
-from dashboard.views import acciones, carga, exportar, general, mensajes, patrones, revision, sentimiento, urgencia
+from dashboard.views import acciones, carga, exportar, general, mensajes, patrones, revision, sentimiento, temas, urgencia
 from dashboard.theme import ASSETS_DIR, NAV_GROUPS
 
 st.set_page_config(
@@ -33,6 +33,7 @@ _PAGE_MODULES = {
     "urgencia": urgencia,
     "mensajes": mensajes,
     "patrones": patrones,
+    "temas": temas,
     "exportar": exportar,
     "carga": carga,
 }

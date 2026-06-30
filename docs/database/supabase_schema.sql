@@ -92,6 +92,17 @@ CREATE TABLE IF NOT EXISTS feedback_correcciones (
 
 CREATE INDEX IF NOT EXISTS idx_correcciones_external_id ON feedback_correcciones(external_id);
 
+CREATE TABLE IF NOT EXISTS feedback_temas_recurrentes (
+    id           BIGSERIAL PRIMARY KEY,
+    periodo_dias INT       NOT NULL DEFAULT 7,
+    temas        JSONB     NOT NULL,
+    resumen_llm  TEXT,
+    created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_temas_recurrentes_created_at
+    ON feedback_temas_recurrentes(created_at DESC);
+
 CREATE OR REPLACE FUNCTION match_feedback(
   query_embedding vector(1024),
   match_count int DEFAULT 10,

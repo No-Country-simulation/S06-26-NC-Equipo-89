@@ -14,7 +14,7 @@ ADRs: [adr/README.md](adr/README.md) · Índice docs: [README.md](README.md)
 | Carga manual o automática de feedback | Completo | CSV/JSON/Excel en dashboard; n8n → WhatsApp, Tally, Google Forms → `/ingest` |
 | Clasificación: sentimiento, categoría, urgencia | Completo | LangGraph `classifier` → `feedback_clasificado` |
 | Resumir mensajes | Completo | Campo `resumen` por clasificación |
-| Detección de temas recurrentes | Completo | `pattern_detector` → `feedback_patrones` |
+| Detección de temas recurrentes | Completo | `pattern_detector` + **Temas Recurrentes** (A estadística + B LLM) |
 | Export CSV/JSON | Completo | Vista Exportar |
 | Panel con insights | Completo | Dashboard v3: KPIs, sentimiento, urgencia, mensajes, patrones |
 | NLP vía API (GPT/Gemini) | Completo | Gemini Flash-Lite + fallback Groq |
@@ -45,6 +45,7 @@ ADRs: [adr/README.md](adr/README.md) · Índice docs: [README.md](README.md)
 | Revisión humana + few-shot dinámico | Completo |
 | Taxonomía cerrada de categorías | Completo — [ADR-010](adr/ADR-010-taxonomia-y-estabilidad.md) |
 | Consistency check (estabilidad) | Completo — manual + job semanal |
+| **Temas Recurrentes (cross-tick A+B)** | Completo — estadística + semántica LLM, job diario |
 | Tests (`pytest`) | Completo (79+ tests) |
 
 ---
@@ -79,6 +80,7 @@ Worker: ciclo cada `BATCH_INTERVAL_MINUTES` (default 5).
 | Alertas de Urgencia | Distribución y listado |
 | Mensajes Clasificados | Detalle con confianza |
 | Patrones Detectados | Último tick |
+| **Temas Recurrentes** | Top categorías del período, tendencias, variantes semánticas LLM |
 | Exportar / Carga | CSV/JSON out · CSV/JSON/Excel in |
 | Copilot (sidebar) | Preguntas RAG sobre feedback |
 
@@ -95,6 +97,7 @@ Auto-refresh cola cada 30 s (toggle sidebar).
 | **008** | **Requerida para acciones** | `feedback_acciones`, `requiere_revision` |
 | **009** | **Requerida para revisión** | `feedback_correcciones` |
 | **010** | Para marcar inestables | `motivo_revision` (baja_confianza / inestabilidad) |
+| **011** | **Requerida para temas recurrentes** | `feedback_temas_recurrentes` |
 
 Archivos: [database/migrations/](database/migrations/) · Schema: [supabase_schema.sql](database/supabase_schema.sql)
 
@@ -108,6 +111,7 @@ Archivos: [database/migrations/](database/migrations/) · Schema: [supabase_sche
 | 2 | Migración 008, nodo `actions`, vistas Acciones + alertas, `health_banner` |
 | 3 | Migración 009, API `PATCH /classifications`, vista Revisar, scripts export/eval |
 | 4 | Taxonomía cerrada de categorías, `consistency_check.py` (manual + job semanal), migración 010, sección Estabilidad en dashboard |
+| 5 | `recurring_topics_job.py` (A estadístico + B semántico LLM), migración 011, job diario en worker, vista Temas Recurrentes en dashboard |
 
 Demo: [guides/demo-e2e-clasificador.md](guides/demo-e2e-clasificador.md)
 
@@ -151,6 +155,8 @@ Demo: [guides/demo-e2e-clasificador.md](guides/demo-e2e-clasificador.md)
 | `GEMINI_CACHE_VERSION` | v3-taxonomia1 | Bump al editar prompts cacheados |
 | `CONSISTENCY_CHECK_INTERVAL_DAYS` | 7 | Job estabilidad (0 = off) |
 | `CONSISTENCY_CHECK_RUNS` | 3 | Runs por mensaje |
+| `RECURRING_TOPICS_INTERVAL_DAYS` | 1 | Job temas recurrentes (0 = off) |
+| `RECURRING_TOPICS_PERIOD_DAYS` | 7 | Ventana histórica de análisis |
 | `GROQ_API_KEY` | — | Fallback recomendado |
 
 Reencolar manual (opcional): `cd backend && ../.venv/bin/python scripts/requeue_errors.py`

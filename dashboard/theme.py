@@ -78,6 +78,7 @@ NAV_GROUPS: dict[str, list[dict[str, str]]] = {
             "url_path": "mensajes",
         },
         {"id": "patrones", "label": "Patrones Detectados", "icon": "🔍", "url_path": "patrones"},
+        {"id": "temas", "label": "Temas Recurrentes", "icon": "🔁", "url_path": "temas"},
     ],
     "Datos": [
         {"id": "exportar", "label": "Exportar Datos", "icon": "⬇️", "url_path": "exportar"},
@@ -102,6 +103,7 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
         "Detalle de cada feedback: resumen, confianza, idioma y categorías",
     ),
     "patrones": ("Patrones Detectados", "Insights extraídos por el agente LangGraph"),
+    "temas": ("Temas Recurrentes", "Categorías que reaparecen en el tiempo — análisis estadístico + LLM"),
     "exportar": ("Exportar Datos", "Descarga de feedback ya clasificado"),
     "carga": ("Carga de datos", "Sube CSV, JSON o Excel para encolar procesamiento"),
 }
