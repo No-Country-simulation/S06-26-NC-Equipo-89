@@ -644,7 +644,7 @@ def get_alertas() -> list[dict]:
                 alerts.append(
                     {
                         "nivel": "warning",
-                        "titulo": f"Patrón nuevo de alto impacto",
+                        "titulo": "Patrón nuevo de alto impacto",
                         "detalle": pat.get("descripcion", "")[:120],
                     }
                 )
