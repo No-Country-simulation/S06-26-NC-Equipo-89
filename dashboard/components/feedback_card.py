@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dashboard.theme import IMPACT_BADGES, SENTIMENT_COLORS, SOURCE_BADGES
+from shared.confidence import get_confidence_review_threshold, is_high_confidence
 
 
 def _badge(label: str, bg: str, color: str) -> str:
@@ -26,9 +27,6 @@ def _sentiment_badge(sentimiento: str) -> str:
 def _urgency_badge(urgencia: str) -> str:
     _label, bg, color = IMPACT_BADGES.get(urgencia, ("—", "#f1f5f9", "#475569"))
     return _badge(urgencia or "—", bg, color)
-
-
-from shared.confidence import get_confidence_review_threshold, is_high_confidence
 
 
 def _confidence_badge(confianza: float | None) -> str:
