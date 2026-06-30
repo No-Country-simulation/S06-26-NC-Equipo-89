@@ -10,6 +10,8 @@ import streamlit as st
 from dotenv import load_dotenv
 from supabase import Client, create_client
 
+from shared.confidence import get_confidence_review_threshold, is_high_confidence
+
 load_dotenv()
 
 
@@ -35,12 +37,65 @@ def _schema_has_tick_id() -> bool:
 def schema_migration_hint() -> str | None:
     """Aviso si falta migración 007 en Supabase."""
     if _schema_has_tick_id():
-        return None
+        hints: list[str] = []
+        if not _schema_has_acciones():
+            hints.append(
+                "Migración **008** pendiente (`feedback_acciones`). "
+                "Aplicá `docs/database/migrations/008_acciones_y_revision.sql`."
+            )
+        if not _schema_has_correcciones():
+            hints.append(
+                "Migración **009** pendiente (`feedback_correcciones`). "
+                "Aplicá `docs/database/migrations/009_correcciones_humanas.sql`."
+            )
+        return " · ".join(hints) if hints else None
     return (
         "Migración **007** pendiente en Supabase (`tick_id`). "
         "El dashboard funciona en modo compatible; aplicá "
         "`docs/database/migrations/007_production_hardening.sql` en el SQL Editor."
     )
+
+
+@st.cache_data(ttl=300)
+def _schema_has_acciones() -> bool:
+    client = get_client()
+    try:
+        client.table("feedback_acciones").select("id").limit(1).execute()
+        return True
+    except Exception as e:
+        if "feedback_acciones" in str(e).lower() and (
+            "does not exist" in str(e).lower() or "42P01" in str(e)
+        ):
+            return False
+        raise
+
+
+@st.cache_data(ttl=300)
+def _schema_has_correcciones() -> bool:
+    client = get_client()
+    try:
+        client.table("feedback_correcciones").select("id").limit(1).execute()
+        return True
+    except Exception as e:
+        if "feedback_correcciones" in str(e).lower() and (
+            "does not exist" in str(e).lower() or "42P01" in str(e)
+        ):
+            return False
+        raise
+
+
+@st.cache_data(ttl=300)
+def _schema_has_revision_columns() -> bool:
+    client = get_client()
+    try:
+        client.table("feedback_clasificado").select("requiere_revision").limit(1).execute()
+        return True
+    except Exception as e:
+        if "requiere_revision" in str(e).lower() and (
+            "does not exist" in str(e).lower() or "42703" in str(e)
+        ):
+            return False
+        raise
 
 
 @st.cache_resource
@@ -104,11 +159,49 @@ def get_kpis() -> dict:
             patrones_query = patrones_query.eq("tick_id", tick_id)
     patrones_res = patrones_query.execute()
 
+    threshold = get_confidence_review_threshold()
+    clas_all_res = (
+        client.table("feedback_clasificado")
+        .select("confianza")
+        .execute()
+    )
+    clas_rows = clas_all_res.data or []
+    total_clas_count = len(clas_rows) or 1
+    alta_conf = sum(
+        1 for row in clas_rows if is_high_confidence(row.get("confianza"), threshold)
+    )
+    pct_alta_confianza = round(alta_conf / total_clas_count * 100, 1)
+
+    acciones_abiertas = 0
+    if _schema_has_acciones():
+        acc_res = (
+            client.table("feedback_acciones")
+            .select("id", count="exact")
+            .eq("estado", "pendiente")
+            .execute()
+        )
+        acciones_abiertas = acc_res.count or 0
+
+    pendientes_revision = 0
+    if _schema_has_revision_columns():
+        rev_res = (
+            client.table("feedback_clasificado")
+            .select("id", count="exact")
+            .eq("requiere_revision", True)
+            .in_("revision_estado", ["pendiente", "auto"])
+            .execute()
+        )
+        pendientes_revision = rev_res.count or 0
+
     return {
         "total_procesados": total_procesados,
         "pct_negativos": neg_pct,
         "alertas_altas": alertas_res.count or 0,
         "total_patrones": patrones_res.count or 0,
+        "pct_alta_confianza": pct_alta_confianza,
+        "acciones_abiertas": acciones_abiertas,
+        "pendientes_revision": pendientes_revision,
+        "confidence_threshold": threshold,
     }
 
 
@@ -323,6 +416,7 @@ def get_worker_activity() -> dict:
     exitos_ultimo = int(datos.get("total_procesados") or 0)
     errores_ultimo = int(datos.get("errores_en_lote") or 0)
     tamano_ultimo = int(datos.get("tamano_lote") or exitos_ultimo + errores_ultimo or 0)
+    acciones_ultimo = int(datos.get("acciones_generadas") or 0)
 
     if health["procesando"] > 0:
         estado_agente = "procesando"
@@ -337,6 +431,7 @@ def get_worker_activity() -> dict:
         "exitos_ultimo_ciclo": exitos_ultimo,
         "errores_ultimo_ciclo": errores_ultimo,
         "tamano_ultimo_ciclo": tamano_ultimo,
+        "acciones_ultimo_ciclo": acciones_ultimo,
         "clasificados_ultimos_5m": clasificados_ultimos_5m,
         "estado_agente": estado_agente,
         "intervalo_minutos": _worker_interval_minutes(),
@@ -447,3 +542,178 @@ def get_ultimo_lote_metricas() -> dict | None:
         "tick_id": row.get("tick_id") if _schema_has_tick_id() else None,
         "datos": datos,
     }
+
+
+# ─── ACCIONES Y ALERTAS (Fase 2) ───────────────────────────────────────────────
+
+
+@st.cache_data(ttl=30)
+def get_acciones_pendientes(limit: int = 50) -> list[dict]:
+    """Acciones sugeridas por el agente, ordenadas por prioridad."""
+    if not _schema_has_acciones():
+        return []
+    client = get_client()
+    res = (
+        client.table("feedback_acciones")
+        .select("*")
+        .eq("estado", "pendiente")
+        .order("prioridad")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return res.data or []
+
+
+@st.cache_data(ttl=30)
+def get_acciones_resumen() -> dict[str, int]:
+    """Conteo de acciones pendientes por tipo."""
+    if not _schema_has_acciones():
+        return {}
+    client = get_client()
+    res = (
+        client.table("feedback_acciones")
+        .select("tipo")
+        .eq("estado", "pendiente")
+        .execute()
+    )
+    summary: dict[str, int] = {}
+    for row in res.data or []:
+        t = row.get("tipo", "otro")
+        summary[t] = summary.get(t, 0) + 1
+    return summary
+
+
+@st.cache_data(ttl=60)
+def get_alertas() -> list[dict]:
+    """Alertas in-app derivadas de KPIs y patrones recientes."""
+    alerts: list[dict] = []
+    kpis = get_kpis()
+    threshold = int(os.getenv("ALERT_URGENCIA_ALTA_THRESHOLD", "5"))
+    spike_pct = float(os.getenv("ALERT_NEGATIVO_SPIKE_PCT", "50"))
+
+    if kpis["alertas_altas"] >= threshold:
+        alerts.append(
+            {
+                "nivel": "error",
+                "titulo": f"{kpis['alertas_altas']} mensajes con urgencia alta",
+                "detalle": "Revisá la bandeja de acciones y alertas de urgencia.",
+            }
+        )
+
+    if kpis["pct_negativos"] >= spike_pct:
+        alerts.append(
+            {
+                "nivel": "warning",
+                "titulo": f"Sentimiento negativo en {kpis['pct_negativos']}% del total",
+                "detalle": f"Umbral configurado: {spike_pct}%.",
+            }
+        )
+
+    if kpis.get("pendientes_revision", 0) > 0:
+        alerts.append(
+            {
+                "nivel": "info",
+                "titulo": f"{kpis['pendientes_revision']} clasificaciones requieren revisión",
+                "detalle": "Confianza por debajo del umbral o marcadas por el agente.",
+            }
+        )
+
+    if _schema_has_acciones() and kpis.get("acciones_abiertas", 0) > 0:
+        alerts.append(
+            {
+                "nivel": "info",
+                "titulo": f"{kpis['acciones_abiertas']} acciones sugeridas pendientes",
+                "detalle": "El agente generó tareas concretas en el último ciclo.",
+            }
+        )
+
+    if _schema_has_tick_id():
+        tick_id = get_latest_tick_id()
+        if tick_id:
+            client = get_client()
+            pat_res = (
+                client.table("feedback_patrones")
+                .select("descripcion, impacto")
+                .eq("tick_id", tick_id)
+                .in_("impacto", ["Alto", "Alta"])
+                .limit(3)
+                .execute()
+            )
+            for pat in pat_res.data or []:
+                alerts.append(
+                    {
+                        "nivel": "warning",
+                        "titulo": f"Patrón nuevo de alto impacto",
+                        "detalle": pat.get("descripcion", "")[:120],
+                    }
+                )
+
+    return alerts
+
+
+# ─── REVISIÓN HUMANA (Fase 3) ──────────────────────────────────────────────────
+
+
+@st.cache_data(ttl=30)
+def get_clasificados_revision(limit: int = 50) -> list[dict]:
+    """Mensajes que requieren confirmación o corrección humana."""
+    client = get_client()
+    threshold = get_confidence_review_threshold()
+    query = (
+        client.table("feedback_clasificado")
+        .select(
+            "external_id, sentimiento, urgencia, categorias, confianza, resumen, idioma, "
+            "requiere_revision, revision_estado, "
+            "feedback_raw(fuente, texto, timestamp)"
+        )
+        .order("created_at", desc=True)
+        .limit(limit)
+    )
+    if _schema_has_revision_columns():
+        query = query.eq("requiere_revision", True).in_(
+            "revision_estado", ["pendiente", "auto"]
+        )
+    else:
+        query = query.lt("confianza", threshold)
+    res = query.execute()
+    return [_flatten_clasificado_row(item) for item in (res.data or [])]
+
+
+@st.cache_data(ttl=120)
+def get_ultimo_eval() -> dict | None:
+    """Último resultado de eval_classification guardado en feedback_metricas."""
+    client = get_client()
+    res = (
+        client.table("feedback_metricas")
+        .select("datos_metricas, created_at")
+        .order("created_at", desc=True)
+        .limit(20)
+        .execute()
+    )
+    for row in res.data or []:
+        datos = row.get("datos_metricas") or {}
+        if isinstance(datos, str):
+            datos = json.loads(datos)
+        if datos.get("tipo") == "eval_run":
+            return {"created_at": row.get("created_at"), "datos": datos}
+    return None
+
+
+def get_ultimo_consistency_run() -> dict | None:
+    """Último resultado de consistency_check guardado en feedback_metricas."""
+    client = get_client()
+    res = (
+        client.table("feedback_metricas")
+        .select("datos_metricas, created_at")
+        .order("created_at", desc=True)
+        .limit(20)
+        .execute()
+    )
+    for row in res.data or []:
+        datos = row.get("datos_metricas") or {}
+        if isinstance(datos, str):
+            datos = json.loads(datos)
+        if datos.get("tipo") == "consistency_run":
+            return {"created_at": row.get("created_at"), "datos": datos}
+    return None

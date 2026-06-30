@@ -28,11 +28,15 @@ def _urgency_badge(urgencia: str) -> str:
     return _badge(urgencia or "—", bg, color)
 
 
+from shared.confidence import get_confidence_review_threshold, is_high_confidence
+
+
 def _confidence_badge(confianza: float | None) -> str:
+    threshold = get_confidence_review_threshold()
     if confianza is None:
         return _badge("Conf. —", "#f1f5f9", "#475569")
     pct = confianza * 100 if confianza <= 1 else confianza
-    if confianza < 0.7:
+    if not is_high_confidence(confianza, threshold):
         return _badge(f"Conf. {pct:.0f}% · revisar", "#fee2e2", "#991b1b")
     return _badge(f"Conf. {pct:.0f}%", "#dcfce7", "#166534")
 

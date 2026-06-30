@@ -3,6 +3,7 @@ from src.agent.state import FeedbackState
 from src.agent.nodes.loader import loader_node
 from src.agent.nodes.classifier import classifier_node
 from src.agent.nodes.pattern_detector import pattern_detector_node
+from src.agent.nodes.actions import actions_node
 from src.agent.nodes.metrics import metrics_node
 from src.agent.nodes.persister import persister_node
 
@@ -19,6 +20,7 @@ workflow = StateGraph(FeedbackState)
 workflow.add_node("loader", loader_node)
 workflow.add_node("classifier", classifier_node)
 workflow.add_node("pattern_detector", pattern_detector_node)
+workflow.add_node("actions", actions_node)
 workflow.add_node("metrics", metrics_node)
 workflow.add_node("persister", persister_node)
 
@@ -30,7 +32,8 @@ workflow.add_conditional_edges("loader", should_continue)
 
 # Flujo secuencial
 workflow.add_edge("classifier", "pattern_detector")
-workflow.add_edge("pattern_detector", "metrics")
+workflow.add_edge("pattern_detector", "actions")
+workflow.add_edge("actions", "metrics")
 workflow.add_edge("metrics", "persister")
 workflow.add_edge("persister", END)
 

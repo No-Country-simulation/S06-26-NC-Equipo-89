@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash-lite"
     gemini_cache_enabled: bool = True
     gemini_cache_ttl_seconds: int = 3600
-    gemini_cache_version: str = "v2-fewshot1"
+    gemini_cache_version: str = "v3-taxonomia1"
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
     cohere_api_key: str = ""
@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     rate_limit_ingest_per_minute: int = 60
     rate_limit_copilot_per_minute: int = 30
     log_pii: bool = True
+    confidence_review_threshold: float = 0.7
+    alert_urgencia_alta_threshold: int = 5
+    alert_negativo_spike_pct: float = 50.0
+    consistency_check_interval_days: int = 7
+    consistency_check_runs: int = 3
+    consistency_check_stability_threshold: float = 0.70
 
     model_config = SettingsConfigDict(
         env_file=(str(_ROOT_ENV), str(_BACKEND_ENV), ".env"),

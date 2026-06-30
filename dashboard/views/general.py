@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from dashboard.components import metricas, pipeline_status, sentimiento
+from dashboard.components import alertas, metricas, pipeline_status, sentimiento
 from dashboard.layout import render_page_header
 
 
@@ -19,6 +19,7 @@ def render() -> None:
             st.rerun()
 
     metricas.render()
+    alertas.render()
     pipeline_status.render()
     st.markdown("---")
     sentimiento.render()

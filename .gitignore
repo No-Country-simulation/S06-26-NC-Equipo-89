@@ -18,3 +18,19 @@ ngrok.yml
 .ngrok2/
 
 # Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+
+# Datos locales (no versionar datasets reales)
+Data/
+
+# Notebooks y temporales
+.ipynb_checkpoints/
+*.log

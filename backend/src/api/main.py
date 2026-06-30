@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import copilot, ingest
+from src.api.routes import classifications, copilot, ingest
 from src.core.config import settings
 from src.tools.supabase_client import db_client, get_db
 
@@ -33,11 +33,12 @@ if settings.cors_origin_list:
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
         allow_credentials=True,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "PATCH"],
         allow_headers=["X-API-Key", "Content-Type"],
     )
 
 app.include_router(ingest.router, tags=["ingest"])
+app.include_router(classifications.router)
 app.include_router(copilot.router, prefix="/copilot", tags=["copilot"])
 
 

@@ -63,4 +63,5 @@ async def loader_node(state: FeedbackState) -> dict:
         "patterns": [],
         "metrics": {},
         "errors": [],
+        "actions": [],
     }

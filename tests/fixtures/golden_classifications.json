@@ -1,0 +1,75 @@
+{
+  "description": "Golden set para eval_classification.py — categorías alineadas a la taxonomía cerrada de classification_system_v2.md",
+  "examples": [
+    {
+      "id": "golden-001",
+      "texto": "La app se cierra sola cuando quiero pagar con QR, ya van 3 veces.",
+      "sentimiento": "Negativo",
+      "urgencia": "Alta",
+      "categorias": ["App", "Pagos"]
+    },
+    {
+      "id": "golden-002",
+      "texto": "Excelente atención de Carla en soporte, me solucionó altiro el tema de la factura.",
+      "sentimiento": "Positivo",
+      "urgencia": "Baja",
+      "categorias": ["Atención al Cliente", "Facturación"]
+    },
+    {
+      "id": "golden-003",
+      "texto": "¿Cuánto tarda el envío a Santa Cruz? No encuentro esa info en la web.",
+      "sentimiento": "Neutral",
+      "urgencia": "Baja",
+      "categorias": ["Logística", "Sitio Web"]
+    },
+    {
+      "id": "golden-004",
+      "texto": "Me cobraron doble en la tarjeta y nadie responde el chat, pésimo servicio.",
+      "sentimiento": "Negativo",
+      "urgencia": "Alta",
+      "categorias": ["Pagos", "Atención al Cliente"]
+    },
+    {
+      "id": "golden-005",
+      "texto": "Gracias por la yapa en el pedido, se nota que valoran al cliente.",
+      "sentimiento": "Positivo",
+      "urgencia": "Baja",
+      "categorias": ["Producto", "Atención al Cliente"]
+    },
+    {
+      "id": "golden-006",
+      "texto": "Voy a cancelar mi cuenta si no arreglan el login, esto es inaceptable.",
+      "sentimiento": "Negativo",
+      "urgencia": "Alta",
+      "categorias": ["App", "Cuenta"]
+    },
+    {
+      "id": "golden-007",
+      "texto": "Todo ok, sin observaciones.",
+      "sentimiento": "Neutral",
+      "urgencia": "Baja",
+      "categorias": []
+    },
+    {
+      "id": "golden-008",
+      "texto": "ERROR 500 en el portal todo el día, pierdo plata sin poder facturar.",
+      "sentimiento": "Negativo",
+      "urgencia": "Alta",
+      "categorias": ["Error Técnico", "Facturación"]
+    },
+    {
+      "id": "golden-009",
+      "texto": "El menú vegetariano tiene pocas opciones, sería chévere ampliarlo.",
+      "sentimiento": "Neutral",
+      "urgencia": "Baja",
+      "categorias": ["Producto"]
+    },
+    {
+      "id": "golden-010",
+      "texto": "Muy buen seguimiento del pedido en la app, llegó antes de lo esperado.",
+      "sentimiento": "Positivo",
+      "urgencia": "Baja",
+      "categorias": ["App", "Logística"]
+    }
+  ]
+}

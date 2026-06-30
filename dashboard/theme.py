@@ -53,6 +53,18 @@ NAV_GROUPS: dict[str, list[dict[str, str]]] = {
     "Análisis": [
         {"id": "general", "label": "Vista General", "icon": "📊", "url_path": "general"},
         {
+            "id": "acciones",
+            "label": "Acciones sugeridas",
+            "icon": "✅",
+            "url_path": "acciones",
+        },
+        {
+            "id": "revision",
+            "label": "Revisar clasificaciones",
+            "icon": "👤",
+            "url_path": "revision",
+        },
+        {
             "id": "sentimiento",
             "label": "Sentimiento y Categorías",
             "icon": "💬",
@@ -75,6 +87,14 @@ NAV_GROUPS: dict[str, list[dict[str, str]]] = {
 
 PAGE_TITLES: dict[str, tuple[str, str]] = {
     "general": ("Vista General", "Monitoreo de feedback en tiempo casi real"),
+    "acciones": (
+        "Acciones sugeridas",
+        "Tareas concretas del agente: urgentes, oportunidades y patrones",
+    ),
+    "revision": (
+        "Revisar clasificaciones",
+        "Confirma o corrige mensajes donde la IA no está segura",
+    ),
     "sentimiento": ("Sentimiento y Categorías", "Distribución emocional y temas recurrentes"),
     "urgencia": ("Alertas de Urgencia", "Mensajes por nivel de urgencia y distribución"),
     "mensajes": (

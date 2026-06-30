@@ -295,6 +295,6 @@ flowchart TD
 
 ## Referencias en repo
 
-- Plan v2 (base implementada): [`plan-dashboard-streamlit-v2.md`](plan-dashboard-streamlit-v2.md)
+- Plan v2: superseded por este documento.
 - ADR dashboard: [`docs/adr/ADR-007-streamlit-dashboard.md`](adr/ADR-007-streamlit-dashboard.md)
 - Código: [`dashboard/`](../dashboard/)

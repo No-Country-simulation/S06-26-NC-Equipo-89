@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS feedback_clasificado (
     categorias JSONB NOT NULL DEFAULT '[]'::jsonb,
     confianza FLOAT,
     resumen TEXT,
+    requiere_revision BOOLEAN DEFAULT FALSE,
+    revision_estado VARCHAR(20) DEFAULT 'auto'
+        CHECK (revision_estado IN ('auto', 'pendiente', 'confirmado', 'corregido')),
     embedding vector(1024),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -60,6 +63,34 @@ CREATE TABLE IF NOT EXISTS feedback_patrones (
 
 CREATE INDEX IF NOT EXISTS idx_patrones_created_at ON feedback_patrones(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_patrones_tick_id ON feedback_patrones(tick_id);
+
+CREATE TABLE IF NOT EXISTS feedback_acciones (
+    id BIGSERIAL PRIMARY KEY,
+    external_id VARCHAR(255) REFERENCES feedback_raw(external_id) ON DELETE SET NULL,
+    tick_id UUID,
+    tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('urgente', 'oportunidad', 'patron', 'revision')),
+    titulo TEXT NOT NULL,
+    descripcion TEXT,
+    prioridad INT DEFAULT 50,
+    estado VARCHAR(20) DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'hecha', 'descartada')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_acciones_estado_prioridad ON feedback_acciones(estado, prioridad);
+CREATE INDEX IF NOT EXISTS idx_acciones_tick_id ON feedback_acciones(tick_id);
+CREATE INDEX IF NOT EXISTS idx_clasificado_revision ON feedback_clasificado(requiere_revision, revision_estado);
+
+CREATE TABLE IF NOT EXISTS feedback_correcciones (
+    id BIGSERIAL PRIMARY KEY,
+    external_id VARCHAR(255) NOT NULL,
+    texto_original TEXT,
+    clasificacion_original JSONB,
+    clasificacion_corregida JSONB NOT NULL,
+    motivo VARCHAR(50),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_correcciones_external_id ON feedback_correcciones(external_id);
 
 CREATE OR REPLACE FUNCTION match_feedback(
   query_embedding vector(1024),

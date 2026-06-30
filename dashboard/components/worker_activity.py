@@ -39,6 +39,8 @@ def render(*, show_delta: bool = True) -> None:
     tamano = activity.get("tamano_ultimo_ciclo", 0)
     clas_5m = activity.get("clasificados_ultimos_5m", 0)
 
+    acciones_lote = activity.get("acciones_ultimo_ciclo", 0)
+
     if estado == "procesando":
         label = "mensaje" if processing == 1 else "mensajes"
         st.caption(f"🔄 **Agente activo ahora** — clasificando {processing} {label}.")
@@ -47,6 +49,7 @@ def render(*, show_delta: bool = True) -> None:
             resumen = (
                 f"último ciclo {format_relative_iso(ultimo_at)}: "
                 f"{exitos} OK · {errores_lote} fallidos de {tamano}"
+                + (f" · {acciones_lote} acciones" if acciones_lote else "")
             )
         else:
             resumen = f"último ciclo {format_relative_iso(ultimo_at)}"

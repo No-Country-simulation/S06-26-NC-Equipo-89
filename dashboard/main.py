@@ -11,7 +11,7 @@ import streamlit as st
 
 from dashboard.components import copilot_fab
 from dashboard.layout import render_sidebar, setup
-from dashboard.views import carga, exportar, general, mensajes, patrones, sentimiento, urgencia
+from dashboard.views import acciones, carga, exportar, general, mensajes, patrones, revision, sentimiento, urgencia
 from dashboard.theme import ASSETS_DIR, NAV_GROUPS
 
 st.set_page_config(
@@ -27,6 +27,8 @@ render_sidebar()
 # ── Navegación multipágina agrupada ───────────────────────────────────────────
 _PAGE_MODULES = {
     "general": general,
+    "acciones": acciones,
+    "revision": revision,
     "sentimiento": sentimiento,
     "urgencia": urgencia,
     "mensajes": mensajes,

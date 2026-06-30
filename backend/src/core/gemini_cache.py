@@ -10,7 +10,7 @@ from google import genai
 from google.genai import types
 
 from src.core.config import settings
-from src.core.prompt_loader import load_prompt
+from src.core.prompt_loader import load_fewshot_prompt, load_prompt
 
 logger = structlog.get_logger()
 
@@ -76,7 +76,7 @@ class GeminiCacheManager:
             return existing
 
         system_instruction = load_prompt("classification_system_v2.md")
-        fewshot = load_prompt("classification_fewshot_v1.md")
+        fewshot = load_fewshot_prompt()
         if not system_instruction or not fewshot:
             raise RuntimeError("Prompts de clasificación no encontrados para caché")
 

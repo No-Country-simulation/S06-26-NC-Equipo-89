@@ -17,7 +17,9 @@
 
 # Feedback Classifier
 
-Sistema de clasificación automática de feedback de clientes con LangGraph, FastAPI, Supabase, n8n y dashboard Streamlit.
+Sistema de análisis automático de feedback: clasifica por **sentimiento, categorías y urgencia**, detecta **patrones**, resume mensajes y muestra **insights** en un panel Streamlit. Fuentes: WhatsApp, formularios web y encuestas (n8n) + carga manual.
+
+**Documentación:** [docs/](docs/README.md) · **Estado:** [implementación](docs/estado-implementacion.md) · **Demo:** [checklist E2E](docs/guides/demo-e2e-clasificador.md) · **Propuesta expansión:** [más fuentes](docs/plans/futuro-ai-native.md)
 
 ## Arquitectura
 
@@ -65,18 +67,19 @@ Variables en `.env` (plantilla en [`.env.example`](.env.example)):
 
 | Variable | Default | Descripción |
 |----------|---------|-------------|
+| `CONFIDENCE_REVIEW_THRESHOLD` | 0.7 | Marca mensajes para revisión humana |
 | `CLASSIFY_LLM_BATCH_SIZE` | 8 | Mensajes por llamada (`1` = 1-a-1) |
 | `CLASSIFY_MAX_TEXT_CHARS` | 300 | Textos largos van solos |
 | `GEMINI_CONCURRENCY` | 3 | Chunks en paralelo |
 | `GEMINI_CACHE_ENABLED` | true | Caché explícito Gemini (Fase B) |
-| `GEMINI_CACHE_VERSION` | v2-fewshot1 | Cambiar al editar prompts cacheados |
+| `GEMINI_CACHE_VERSION` | v3-taxonomia1 | Cambiar al editar prompts cacheados |
 
-Detalle: [docs/plans/optimizacion-llm-fase-a.md](docs/plans/optimizacion-llm-fase-a.md) · [Fase B](docs/plans/optimizacion-llm-fase-b.md) · [Micro-batch](docs/plans/optimizacion-llm-microbatch.md)
+Detalle: [docs/plans/optimizacion-llm.md](docs/plans/optimizacion-llm.md)
 
 Aplicar schema en Supabase SQL Editor:
 
 1. [`docs/database/supabase_schema.sql`](docs/database/supabase_schema.sql) (schema completo)
-2. Si ya tenías tablas creadas: [`docs/database/migrations/006_schema_hardening.sql`](docs/database/migrations/006_schema_hardening.sql)
+2. Si ya tenías tablas creadas, aplicar migraciones en orden: [006](docs/database/migrations/006_schema_hardening.sql) → [007](docs/database/migrations/007_production_hardening.sql) → [008](docs/database/migrations/008_acciones_y_revision.sql) → [009](docs/database/migrations/009_correcciones_humanas.sql) → [010](docs/database/migrations/010_motivo_revision.sql)
 
 ## Levantar en local
 
@@ -135,7 +138,9 @@ cd backend && ../.venv/bin/python embed_job.py
 
 ### Dashboard Streamlit (v3)
 
-Navegación multipágina: Vista General, Sentimiento, Urgencia, **Mensajes Clasificados** (resumen, confianza, idioma), Patrones, Exportar, Carga. Copilot IA en sidebar. Modo oscuro en sidebar.
+Navegación: **Vista General**, **Acciones sugeridas**, **Revisar clasificaciones**, Sentimiento, Urgencia, Mensajes Clasificados, Patrones, Exportar, Carga. Copilot IA en sidebar. Auto-refresh de cola cada 30 s.
+
+Extensiones: [plan-clasificador-automejora.md](docs/plans/plan-clasificador-automejora.md)
 
 ## n8n — workflows y fuentes
 
@@ -211,17 +216,17 @@ Documentación completa en [`docs/`](docs/README.md). Punto de entrada según tu
 El diseño del sistema está documentado en [Architecture Decision Records](docs/adr/README.md):
 
 - LLM y clasificación (Gemini + Groq)
-- Pipeline LangGraph
+- Pipeline LangGraph (6 nodos)
 - Ingestión n8n (WhatsApp, Tally, Google Forms)
 - Supabase + RAG Copilot
-- Dashboard Streamlit v3
+- Dashboard Streamlit v3 + automejora acotada (ADR-009, ADR-010)
 
 ### Más recursos
 
 - [Guías operativas](docs/guides/) — n8n, Tally, Forms, BI
 - [Seguridad y secretos](docs/guides/seguridad-y-secretos.md) — qué no subir a Git
 - [Base de datos](docs/database/) — schema y migraciones
-- [Optimización LLM](docs/plans/optimizacion-llm-fase-a.md) — fases A–D implementadas
+- [Optimización LLM](docs/plans/optimizacion-llm.md) — fases A–D implementadas
 
 ## Formato CSV para carga manual
 
@@ -269,7 +274,7 @@ docker compose -f docker-compose.prod.yml --env-file /path/to/.env up -d
 
 ### Checklist go-live
 
-1. Migración `007_production_hardening.sql` aplicada en Supabase prod
+1. Migraciones **007**, **008** y **009** aplicadas en Supabase prod
 2. `API_KEY` rotada (`openssl rand -hex 32`) y `ENV=production`
 3. Dashboard con rol `dashboard_readonly` + `DASHBOARD_READONLY=true`
 4. Proxy TLS + Basic Auth delante del dashboard ([guía](docs/guides/dashboard-proxy-auth.md))
@@ -301,7 +306,7 @@ samples/         # Plantillas de ejemplo (sin datos reales)
 n8n/             # Workflows exportados (sin API keys embebidas)
 prompts/         # Prompts LLM (system, few-shot, patrones)
 docs/            # Índice en docs/README.md
-tests/           # Suite pytest (55+ tests)
+tests/           # Suite pytest (70+ tests)
 .github/         # CI: ruff + pytest + gitleaks
 docker-compose.prod.yml  # Despliegue producción
 ```

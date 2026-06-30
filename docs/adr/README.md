@@ -18,12 +18,15 @@ Cada ADR documenta el **contexto**, la **decisión** tomada y su **implementaci�
 | [ADR-006](ADR-006-micro-batching.md) | Micro-batching y reintentos | Aceptado |
 | [ADR-007](ADR-007-streamlit-dashboard.md) | Dashboard Streamlit + BI | Aceptado |
 | [ADR-008](ADR-008-copilot-rag.md) | Copilot RAG (Cohere + FastAPI) | Aceptado |
+| [ADR-009](ADR-009-human-in-the-loop.md) | Human-in-the-loop y few-shot dinámico | Aceptado |
+| [ADR-010](ADR-010-taxonomia-y-estabilidad.md) | Taxonomía cerrada de categorías y medición de estabilidad | Aceptado |
 
 ## Cómo leerlos
 
 1. Empezá por **ADR-003** (fuentes de datos) y **ADR-002** (pipeline del agente) para entender el flujo.
 2. **ADR-001** y **ADR-008** explican las decisiones de LLM y RAG.
 3. **ADR-005** y **ADR-006** cubren persistencia y procesamiento por lotes.
+4. **ADR-009** y **ADR-010** documentan revisión humana, mejora por few-shot, taxonomía cerrada y medición de estabilidad.
 
 ## Formato
 

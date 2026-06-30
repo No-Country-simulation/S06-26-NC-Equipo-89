@@ -12,7 +12,7 @@ Salida: {"sentimiento":"Positivo","categorias":["Atención al Cliente","Facturac
 
 ## Ejemplo 3
 Entrada: ¿Cuánto tarda el envío a Santa Cruz? No encuentro esa info en la web.
-Salida: {"sentimiento":"Neutral","categorias":["Logística"],"urgencia":"Baja","idioma":"Español","confianza":0.88,"resumen":"Consulta sobre tiempos de envío a Santa Cruz."}
+Salida: {"sentimiento":"Neutral","categorias":["Logística","Sitio Web"],"urgencia":"Baja","idioma":"Español","confianza":0.88,"resumen":"Consulta sobre tiempos de envío a Santa Cruz no hallada en la web."}
 
 ## Ejemplo 4
 Entrada: Me cobraron doble en la tarjeta y nadie responde el chat, pésimo servicio.
@@ -48,7 +48,7 @@ Salida: {"sentimiento":"Neutral","categorias":["Producto"],"urgencia":"Baja","id
 
 ## Ejemplo 12
 Entrada: ERROR 500 en el portal todo el día, pierdo plata sin poder facturar.
-Salida: {"sentimiento":"Negativo","categorias":["App","Facturación"],"urgencia":"Alta","idioma":"Español","confianza":0.97,"resumen":"Error 500 impide facturar con impacto económico."}
+Salida: {"sentimiento":"Negativo","categorias":["Error Técnico","Facturación"],"urgencia":"Alta","idioma":"Español","confianza":0.97,"resumen":"Error 500 impide facturar con impacto económico."}
 
 ## Ejemplo 13
 Entrada: Muy buena la nueva función de seguimiento en tiempo real del pedido.
@@ -84,7 +84,7 @@ Salida: {"sentimiento":"Positivo","categorias":["Atención al Cliente"],"urgenci
 
 ## Ejemplo 21
 Entrada: Me van a denunciar a Indecopi si no devuelven mi dinero hoy.
-Salida: {"sentimiento":"Negativo","categorias":["Pagos","Legal"],"urgencia":"Alta","idioma":"Español","confianza":0.96,"resumen":"Amenaza de denuncia legal por falta de devolución."}
+Salida: {"sentimiento":"Negativo","categorias":["Pagos"],"urgencia":"Alta","idioma":"Español","confianza":0.96,"resumen":"Amenaza de denuncia legal por falta de devolución."}
 
 ## Ejemplo 22
 Entrada: Could you send the invoice in English please?

@@ -6,3 +6,4 @@ class FeedbackState(TypedDict):
     patterns: List[Dict[str, Any]]
     metrics: Dict[str, Any]
     errors: List[Dict[str, Any]]
+    actions: List[Dict[str, Any]]

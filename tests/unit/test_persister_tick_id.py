@@ -48,6 +48,7 @@ async def test_persister_uses_same_tick_id_for_metricas_and_patrones():
             {"descripcion": "Demoras", "frecuencia_estimada": 5, "nivel_impacto": "Alto"},
         ],
         "metrics": {"total": 1, "negativos": 1},
+        "actions": [],
     }
 
     tick_ids: list = []
@@ -97,6 +98,7 @@ async def test_persister_upsert_clasificado_sql():
         "errors": [],
         "patterns": [],
         "metrics": {},
+        "actions": [],
     }
 
     with patch("src.agent.nodes.persister.get_db", new_callable=AsyncMock, return_value=pool):
