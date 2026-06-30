@@ -321,12 +321,38 @@ def get_latest_tick_id() -> str | None:
 
 
 @st.cache_data(ttl=60)
+def _latest_tick_id_con_patrones() -> str | None:
+    """Último tick_id que efectivamente generó patrones.
+
+    Evita usar el heartbeat de un tick vacío (cola sin mensajes), que dejaría
+    la vista en blanco aunque haya patrones históricos.
+    """
+    client = get_client()
+    try:
+        res = (
+            client.table("feedback_patrones")
+            .select("tick_id, created_at")
+            .not_.is_("tick_id", "null")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    except Exception as e:
+        if _is_missing_tick_id_column(e):
+            return None
+        raise
+    if res.data and res.data[0].get("tick_id"):
+        return res.data[0]["tick_id"]
+    return None
+
+
+@st.cache_data(ttl=60)
 def get_patrones(impacto_filtro: str | None = None, *, latest_tick_only: bool = True) -> list[dict]:
-    """Patrones del agente; por defecto solo el último tick del worker."""
+    """Patrones del agente; por defecto solo el último tick que generó patrones."""
     client = get_client()
     query = client.table("feedback_patrones").select("*").order("created_at", desc=True)
     if latest_tick_only and _schema_has_tick_id():
-        tick_id = get_latest_tick_id()
+        tick_id = _latest_tick_id_con_patrones()
         if tick_id:
             query = query.eq("tick_id", tick_id)
     if impacto_filtro and impacto_filtro != "Todos":
