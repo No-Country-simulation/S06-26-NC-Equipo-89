@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 os.environ.setdefault("API_KEY", "test-api-key")
 os.environ.setdefault("DB_DSN", "postgresql://test:test@localhost:5432/test")
+os.environ.setdefault("GEMINI_API_KEY", "test-gemini-key")
 
 
 class _AsyncCM:
