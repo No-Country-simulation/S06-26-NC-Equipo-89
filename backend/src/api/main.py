@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import classifications, copilot, ingest
+from src.api.routes import classifications, copilot, ingest, quality
 from src.core.config import settings
 from src.tools.supabase_client import db_client, get_db
 
@@ -40,6 +40,7 @@ if settings.cors_origin_list:
 app.include_router(ingest.router, tags=["ingest"])
 app.include_router(classifications.router)
 app.include_router(copilot.router, prefix="/copilot", tags=["copilot"])
+app.include_router(quality.router)
 
 
 @app.get("/health")

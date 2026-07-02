@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from dashboard.components import copilot_fab, health_banner, status_bar
+from dashboard.components import copilot_fab, health_banner, quality_jobs, status_bar
 from dashboard.components.pipeline_status import render as render_pipeline_sidebar
 from dashboard.components.ui import brand_sidebar, inject_styles, page_header
 from dashboard.theme import ASSETS_DIR, PAGE_TITLES
@@ -42,6 +42,9 @@ def render_sidebar() -> None:
         )
 
         st.caption("Los KPIs y gráficos se refrescan con «Refrescar datos».")
+
+        st.divider()
+        quality_jobs.render_sidebar()
 
         st.divider()
 

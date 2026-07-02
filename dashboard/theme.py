@@ -48,37 +48,41 @@ SOURCE_BADGES: dict[str, tuple[str, str, str]] = {
     "excel": ("Excel", "#fef9c3", "#854d0e"),
 }
 
+# Etiquetas del clasificador (prompt classification_system_v2) → qué cubre cada una
+CATEGORIA_HINTS: dict[str, str] = {
+    "App": "Aplicación móvil o web: fallas, crashes, usabilidad",
+    "Pagos": "Cobros, QR, tarjetas, transferencias, devoluciones",
+    "Facturación": "Facturas, comprobantes, montos en documentos",
+    "Atención al Cliente": "Soporte, servicio al cliente, sucursales, chat, tiempos de respuesta",
+    "Logística": "Envíos, entregas, demoras, seguimiento",
+    "Producto": "Calidad, variedad, combos, stock",
+    "Cuenta": "Login, registro, perfil, baja de cuenta",
+    "Sitio Web": "Página web: navegación, información en línea",
+    "Error Técnico": "Caídas del sistema, errores 500, bugs técnicos",
+    "Precios": "Promociones, subas, descuentos, comparación de precios",
+}
+
 # ── Navegación agrupada ───────────────────────────────────────────────────────
 NAV_GROUPS: dict[str, list[dict[str, str]]] = {
-    "Análisis": [
+    "Operación": [
         {"id": "general", "label": "Vista General", "icon": "📊", "url_path": "general"},
         {
-            "id": "acciones",
-            "label": "Acciones sugeridas",
-            "icon": "✅",
-            "url_path": "acciones",
-        },
-        {
-            "id": "revision",
-            "label": "Revisar clasificaciones",
-            "icon": "👤",
-            "url_path": "revision",
-        },
-        {
-            "id": "sentimiento",
-            "label": "Sentimiento y Categorías",
-            "icon": "💬",
-            "url_path": "sentimiento",
-        },
-        {"id": "urgencia", "label": "Alertas de Urgencia", "icon": "🚨", "url_path": "urgencia"},
-        {
-            "id": "mensajes",
-            "label": "Mensajes Clasificados",
+            "id": "clasificaciones",
+            "label": "Clasificaciones",
             "icon": "📋",
-            "url_path": "mensajes",
+            "url_path": "clasificaciones",
         },
-        {"id": "patrones", "label": "Patrones Detectados", "icon": "🔍", "url_path": "patrones"},
-        {"id": "temas", "label": "Temas Recurrentes", "icon": "🔁", "url_path": "temas"},
+    ],
+    "Prioridades": [
+        {
+            "id": "prioridades",
+            "label": "Urgencia y señales",
+            "icon": "🚨",
+            "url_path": "prioridades",
+        },
+    ],
+    "Análisis": [
+        {"id": "tendencias", "label": "Tendencias", "icon": "🔍", "url_path": "tendencias"},
     ],
     "Datos": [
         {"id": "exportar", "label": "Exportar Datos", "icon": "⬇️", "url_path": "exportar"},
@@ -88,22 +92,18 @@ NAV_GROUPS: dict[str, list[dict[str, str]]] = {
 
 PAGE_TITLES: dict[str, tuple[str, str]] = {
     "general": ("Vista General", "Monitoreo de feedback en tiempo casi real"),
-    "acciones": (
-        "Acciones sugeridas",
-        "Tareas concretas del agente: urgentes, oportunidades y patrones",
+    "clasificaciones": (
+        "Clasificaciones",
+        "Mensajes clasificados y revisión humana",
     ),
-    "revision": (
-        "Revisar clasificaciones",
-        "Confirma o corrige mensajes donde la IA no está segura",
+    "prioridades": (
+        "Urgencia y señales",
+        "Clasificación por urgencia y resumen de lo que priorizó el agente",
     ),
-    "sentimiento": ("Sentimiento y Categorías", "Distribución emocional y temas recurrentes"),
-    "urgencia": ("Alertas de Urgencia", "Mensajes por nivel de urgencia y distribución"),
-    "mensajes": (
-        "Mensajes Clasificados",
-        "Detalle de cada feedback: resumen, confianza, idioma y categorías",
+    "tendencias": (
+        "Tendencias",
+        "Temas recurrentes y patrones detectados",
     ),
-    "patrones": ("Patrones Detectados", "Insights extraídos por el agente LangGraph"),
-    "temas": ("Temas Recurrentes", "Categorías que reaparecen en el tiempo — análisis estadístico + LLM"),
     "exportar": ("Exportar Datos", "Descarga de feedback ya clasificado"),
     "carga": ("Carga de datos", "Sube CSV, JSON o Excel para encolar procesamiento"),
 }

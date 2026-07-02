@@ -125,6 +125,53 @@ async def _fetch_patrones_recientes(conn, n_ticks: int = 5) -> list[str]:
     return [r["descripcion"] for r in rows]
 
 
+# Palabras en texto de patrones → categoría del clasificador (fallback si el LLM no matchea)
+_PATRON_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "Atención al Cliente": (
+        "soporte",
+        "servicio al cliente",
+        "atención al cliente",
+        "atención",
+        "chatbot",
+        "espera",
+        "sucursal",
+        "whatsapp",
+        "respuesta",
+        "agente",
+    ),
+    "App": ("app", "aplicación", "aplicacion", "crash", "cierra sola"),
+    "Pagos": ("pago", "cobro", "qr", "tarjeta", "transferencia", "devolución", "devolucion"),
+    "Logística": ("envío", "envio", "delivery", "entrega", "demora", "seguimiento"),
+    "Producto": ("producto", "combo", "calidad", "stock"),
+    "Facturación": ("factura", "comprobante", "boleta"),
+    "Cuenta": ("login", "registro", "cuenta", "contraseña", "contrasena"),
+    "Sitio Web": ("sitio", "web", "página", "pagina"),
+    "Error Técnico": ("error 500", "error técnico", "caída", "caida", "bug"),
+    "Precios": ("precio", "promoción", "promocion", "descuento", "2x1"),
+}
+
+
+def _variantes_desde_patrones(categoria: str, patrones: list[str]) -> list[str]:
+    """Extrae fragmentos de patrones que mencionan keywords de la categoría."""
+    keywords = _PATRON_KEYWORDS.get(categoria)
+    if not keywords or not patrones:
+        return []
+
+    hits: list[str] = []
+    for desc in patrones:
+        lower = desc.lower()
+        if not any(kw in lower for kw in keywords):
+            continue
+        snippet = desc.strip()
+        if len(snippet) > 100:
+            snippet = snippet[:99].rstrip() + "…"
+        if snippet not in hits:
+            hits.append(snippet)
+        if len(hits) >= 5:
+            break
+    return hits
+
+
 # ── Parte B — semántica (LLM) ────────────────────────────────────────────────
 
 async def _enrich_with_llm(
@@ -187,13 +234,16 @@ async def run_recurring_topics(
         temas = []
         for s in stats:
             cat = s["cat_value"]
+            variantes_cat = variantes.get(cat) or []
+            if not variantes_cat and patrones:
+                variantes_cat = _variantes_desde_patrones(cat, patrones)
             temas.append({
                 "categoria": cat,
                 "menciones": int(s["menciones"]),
                 "dias_activos": int(s["dias_activos"]),
                 "pct_urgencia_alta": float(s["pct_urgencia_alta"] or 0),
                 "tendencia": _tendencia(int(s["menciones"]), prev.get(cat)),
-                "variantes_semanticas": variantes.get(cat, []),
+                "variantes_semanticas": variantes_cat,
                 "resumen_tema": resumenes.get(cat, ""),
             })
 

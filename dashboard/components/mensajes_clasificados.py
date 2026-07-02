@@ -9,12 +9,13 @@ import streamlit as st
 
 from dashboard.components.formatters import format_fecha
 from dashboard.components.feedback_card import feedback_card_html
+from dashboard.components.filters import filter_dataframe_by_date, resolve_display_limit
 from dashboard.components.ui import empty_state, section_header
 from dashboard.supabase_queries import get_clasificados_export
 
 
 def _apply_filters(df: pd.DataFrame) -> pd.DataFrame:
-    filtered = df.copy()
+    filtered = filter_dataframe_by_date(df, key_prefix="msg")
 
     fuentes = sorted(filtered["fuente"].dropna().unique().tolist())
     if fuentes:
@@ -84,16 +85,11 @@ def render() -> None:
     m4.metric("Revisar (conf. < 70%)", low_conf, help="Clasificaciones que conviene validar manualmente")
 
     st.markdown("---")
-    with st.expander("Filtros", expanded=False):
+    with st.expander("Filtros", expanded=True):
         filtered = _apply_filters(df)
 
-    limit = st.select_slider(
-        "Mensajes por página",
-        options=[10, 25, 50, 100],
-        value=25,
-        key="msg_page_size",
-    )
-    st.caption(f"Mostrando {min(len(filtered), limit)} de {len(filtered)} (total {len(df)})")
+    limit = resolve_display_limit(len(filtered), key_prefix="msg")
+    st.caption(f"Mostrando {min(len(filtered), limit)} de {len(filtered)} (total en base {len(df)})")
 
     if filtered.empty:
         empty_state("Ningún mensaje coincide con los filtros.")
@@ -122,4 +118,7 @@ def render() -> None:
         )
 
     if len(filtered) > limit:
-        st.info(f"Hay {len(filtered) - limit} mensajes más. Subí «Mensajes por página» o acotá con filtros.")
+        st.info(
+            f"Hay {len(filtered) - limit} mensajes más. Activá «Mostrar todos» "
+            "o ampliá «Mensajes a mostrar»."
+        )

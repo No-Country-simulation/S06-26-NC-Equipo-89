@@ -47,7 +47,8 @@ def _score_example(expected: dict, result: dict) -> dict:
     return fields
 
 
-async def main(save_metrics: bool) -> None:
+async def run_eval_classification(save_metrics: bool = True) -> dict:
+    """Evalúa el clasificador contra el golden set. Devuelve el resumen."""
     examples = _load_golden()
     usage = UsageStats()
     results: list[dict] = []
@@ -78,8 +79,6 @@ async def main(save_metrics: bool) -> None:
         "tipo": "eval_run",
     }
 
-    print(json.dumps(summary, indent=2, ensure_ascii=False))
-
     if save_metrics:
         await db_client.connect()
         try:
@@ -90,6 +89,14 @@ async def main(save_metrics: bool) -> None:
                 )
         finally:
             await db_client.close()
+
+    return summary
+
+
+async def main(save_metrics: bool) -> None:
+    summary = await run_eval_classification(save_metrics=save_metrics)
+    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    if save_metrics:
         print("Resultado guardado en feedback_metricas.")
 
 

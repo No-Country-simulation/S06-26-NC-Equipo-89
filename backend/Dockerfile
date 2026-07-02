@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ /app/backend/
 COPY shared/ /app/shared/
 COPY prompts/ /app/prompts/
+COPY tests/fixtures/ /app/tests/fixtures/
 COPY .env.example /app/.env.example
 
 WORKDIR /app/backend

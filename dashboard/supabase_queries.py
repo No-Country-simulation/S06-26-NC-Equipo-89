@@ -275,7 +275,7 @@ def _flatten_clasificado_row(item: dict) -> dict:
 
 
 @st.cache_data(ttl=30)
-def get_mensajes_por_urgencia(urgencia: str | None = None, limit: int = 30) -> list[dict]:
+def get_mensajes_por_urgencia(urgencia: str | None = None, limit: int = 2000) -> list[dict]:
     """Mensajes clasificados filtrados por urgencia, con texto y metadatos."""
     client = get_client()
     query = (
@@ -610,6 +610,31 @@ def get_acciones_resumen() -> dict[str, int]:
     return summary
 
 
+def marcar_accion_estado(accion_id: int, estado: str) -> tuple[bool, str]:
+    """Actualiza estado de una acción sugerida (hecha | descartada)."""
+    if estado not in ("hecha", "descartada"):
+        return False, "Estado inválido"
+    if not _schema_has_acciones():
+        return False, "Migración 008 pendiente"
+    client = get_client()
+    try:
+        res = (
+            client.table("feedback_acciones")
+            .update({"estado": estado})
+            .eq("id", accion_id)
+            .execute()
+        )
+        if res.data:
+            get_acciones_pendientes.clear()
+            get_acciones_resumen.clear()
+            get_kpis.clear()
+            get_alertas.clear()
+            return True, "OK"
+        return False, "No se encontró la acción"
+    except Exception as e:
+        return False, str(e)
+
+
 @st.cache_data(ttl=60)
 def get_alertas() -> list[dict]:
     """Alertas in-app derivadas de KPIs y patrones recientes."""
@@ -781,3 +806,45 @@ def get_temas_recurrentes() -> dict | None:
         "temas": temas,
         "resumen_llm": row.get("resumen_llm"),
     }
+
+
+@st.cache_data(ttl=300)
+def get_ejemplos_resumen_por_categorias(
+    categorias: tuple[str, ...],
+    limit_por_categoria: int = 3,
+) -> dict[str, list[str]]:
+    """Resúmenes recientes de mensajes clasificados, agrupados por categoría."""
+    if not categorias:
+        return {}
+
+    client = get_client()
+    res = (
+        client.table("feedback_clasificado")
+        .select("categorias, resumen")
+        .not_.is_("resumen", "null")
+        .order("created_at", desc=True)
+        .limit(500)
+        .execute()
+    )
+
+    objetivo = set(categorias)
+    ejemplos: dict[str, list[str]] = {c: [] for c in categorias}
+
+    for row in res.data or []:
+        resumen = (row.get("resumen") or "").strip()
+        if not resumen:
+            continue
+        cats = row.get("categorias") or []
+        if not isinstance(cats, list):
+            cats = [cats] if cats else []
+        for cat in cats:
+            if cat not in objetivo:
+                continue
+            bucket = ejemplos[cat]
+            if resumen in bucket or len(bucket) >= limit_por_categoria:
+                continue
+            bucket.append(resumen)
+        if all(len(ejemplos[c]) >= limit_por_categoria for c in categorias):
+            break
+
+    return ejemplos
