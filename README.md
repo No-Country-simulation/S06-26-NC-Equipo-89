@@ -32,19 +32,12 @@ Sistema de análisis automático de feedback: clasifica por **sentimiento, categ
 
 ## Requisitos
 
-| Requisito            | Descripción                                                                                                                          | Obligatorio |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | :---------: |
-| **Python 3.12+**     | Lenguaje principal para el backend (FastAPI, LangGraph y procesamiento de IA).                                                       |      ✅      |
-| **Docker**           | Necesario para ejecutar **n8n** y los servicios de la aplicación en contenedores, simplificando el despliegue.                       |      ✅      |
-| **Oracle Cloud**     | Infraestructura cloud para alojar el backend, contenedores, automatizaciones y servicios del sistema con alta disponibilidad.        |      ✅      |
-| **Streamlit**        | Framework para desarrollar la interfaz web interactiva utilizada por los usuarios para consultar el sistema y visualizar resultados. |      ✅      |
-| **FastAPI**          | Framework para la construcción de la API REST que conecta la interfaz, los agentes y los servicios externos.                         |      ✅      |
-| **LangGraph**        | Framework para la orquestación de agentes de IA, definición de flujos conversacionales y coordinación de herramientas y modelos.     |      ✅      |
-| **n8n**              | Plataforma de automatización de workflows para integrar servicios externos, ejecutar procesos programados y orquestar tareas.        |      ✅      |
-| **Supabase Account** | Base de datos PostgreSQL con Row Level Security (RLS), autenticación y almacenamiento del feedback de los usuarios.                  |      ✅      |
-| **Gemini API**       | Modelo principal para la clasificación de feedback, generación de respuestas y razonamiento del sistema.                             |      ✅      |
-| **Cohere API**       | Servicio para la generación de embeddings utilizados en búsqueda semántica y arquitecturas RAG.                                      |      ✅      |
-| **Groq API**         | Fallback opcional para la inferencia cuando Gemini responde con errores **503** o **429**, mejorando la disponibilidad del servicio. | ⚠️ Opcional |
+
+
+<p align="center">
+  <img src="docs/HERRAMIENTAS.png" alt="Banner del proyecto" width="100%">
+</p>
+
 
 ## Configuración
 
