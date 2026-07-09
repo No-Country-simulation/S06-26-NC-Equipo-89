@@ -347,7 +347,12 @@ def _latest_tick_id_con_patrones() -> str | None:
 
 
 @st.cache_data(ttl=60)
-def get_patrones(impacto_filtro: str | None = None, *, latest_tick_only: bool = True) -> list[dict]:
+def get_patrones(
+    impacto_filtro: str | None = None,
+    *,
+    latest_tick_only: bool = True,
+    since_days: int | None = None,
+) -> list[dict]:
     """Patrones del agente; por defecto solo el último tick que generó patrones."""
     client = get_client()
     query = client.table("feedback_patrones").select("*").order("created_at", desc=True)
@@ -355,6 +360,11 @@ def get_patrones(impacto_filtro: str | None = None, *, latest_tick_only: bool = 
         tick_id = _latest_tick_id_con_patrones()
         if tick_id:
             query = query.eq("tick_id", tick_id)
+    if since_days is not None and since_days > 0:
+        from datetime import datetime, timedelta, timezone
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=since_days)
+        query = query.gte("created_at", cutoff.isoformat())
     if impacto_filtro and impacto_filtro != "Todos":
         query = query.eq("impacto", impacto_filtro)
     res = query.execute()
@@ -771,20 +781,65 @@ def get_ultimo_consistency_run() -> dict | None:
 
 
 @st.cache_data(ttl=300)
-def get_temas_recurrentes() -> dict | None:
-    """
-    Último análisis de temas recurrentes guardado en feedback_temas_recurrentes.
-    Retorna dict con claves: created_at, periodo_dias, temas (list), resumen_llm.
-    """
+def list_temas_recurrentes_snapshots(*, limit: int = 50) -> list[dict]:
+    """Metadatos de análisis de temas guardados (más reciente primero)."""
     client = get_client()
     try:
         res = (
             client.table("feedback_temas_recurrentes")
+            .select("id, periodo_dias, created_at")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+    except Exception as e:
+        if "feedback_temas_recurrentes" in str(e).lower() and (
+            "does not exist" in str(e).lower() or "42P01" in str(e)
+        ):
+            return []
+        raise
+    return res.data or []
+
+
+def _parse_temas_row(row: dict) -> dict:
+    temas = row.get("temas") or []
+    if isinstance(temas, str):
+        temas = json.loads(temas)
+    return {
+        "id": row.get("id"),
+        "created_at": row.get("created_at"),
+        "periodo_dias": row.get("periodo_dias", 7),
+        "temas": temas,
+        "resumen_llm": row.get("resumen_llm"),
+    }
+
+
+@st.cache_data(ttl=300)
+def get_temas_recurrentes(
+    *,
+    periodo_dias: int | None = None,
+    snapshot_id: int | None = None,
+) -> dict | None:
+    """
+    Análisis de temas recurrentes en feedback_temas_recurrentes.
+
+    - ``snapshot_id``: fila exacta (modo historial).
+    - ``periodo_dias``: último análisis con esa ventana.
+    - Sin args: el más reciente de cualquier ventana.
+    """
+    client = get_client()
+    try:
+        query = (
+            client.table("feedback_temas_recurrentes")
             .select("id, periodo_dias, temas, resumen_llm, created_at")
             .order("created_at", desc=True)
             .limit(1)
-            .execute()
         )
+        if snapshot_id is not None:
+            query = query.eq("id", snapshot_id)
+        elif periodo_dias is not None:
+            query = query.eq("periodo_dias", periodo_dias)
+        res = query.execute()
     except Exception as e:
         if "feedback_temas_recurrentes" in str(e).lower() and (
             "does not exist" in str(e).lower() or "42P01" in str(e)
@@ -795,17 +850,7 @@ def get_temas_recurrentes() -> dict | None:
     if not res.data:
         return None
 
-    row = res.data[0]
-    temas = row.get("temas") or []
-    if isinstance(temas, str):
-        temas = json.loads(temas)
-
-    return {
-        "created_at": row.get("created_at"),
-        "periodo_dias": row.get("periodo_dias", 7),
-        "temas": temas,
-        "resumen_llm": row.get("resumen_llm"),
-    }
+    return _parse_temas_row(res.data[0])
 
 
 @st.cache_data(ttl=300)

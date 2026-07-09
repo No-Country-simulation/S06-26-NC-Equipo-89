@@ -7,6 +7,22 @@ import streamlit as st
 
 PAGE_SIZE_OPTIONS: tuple[int, ...] = (25, 50, 100, 250, 500, 1000)
 
+TRENDS_PERIOD_LABELS: tuple[str, ...] = (
+    "Último análisis",
+    "Últimos 7 días",
+    "Últimos 30 días",
+    "Últimos 90 días",
+    "Todo el historial",
+)
+
+TRENDS_PERIOD_VALUES: dict[str, str | int] = {
+    "Último análisis": "latest",
+    "Últimos 7 días": 7,
+    "Últimos 30 días": 30,
+    "Últimos 90 días": 90,
+    "Todo el historial": "all",
+}
+
 
 def _default_page_size(filtered_count: int) -> int:
     if filtered_count <= 0:
@@ -50,6 +66,25 @@ def filter_dataframe_by_date(df: pd.DataFrame, *, key_prefix: str) -> pd.DataFra
     start, end = date_range
     mask = (date_col.dt.date >= start) & (date_col.dt.date <= end)
     return df.loc[mask].copy()
+
+
+def render_trends_period_filter(*, key_prefix: str) -> tuple[str, int | None]:
+    """Selector de período para vistas de tendencias (temas / patrones).
+
+    Returns:
+        (mode, days) con mode en ``latest``, ``days`` o ``all``.
+    """
+    label = st.selectbox(
+        "Período",
+        options=list(TRENDS_PERIOD_VALUES.keys()),
+        key=f"{key_prefix}_period",
+    )
+    value = TRENDS_PERIOD_VALUES[label]
+    if value == "latest":
+        return "latest", None
+    if value == "all":
+        return "all", None
+    return "days", int(value)
 
 
 def resolve_display_limit(filtered_count: int, *, key_prefix: str) -> int:

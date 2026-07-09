@@ -5,6 +5,10 @@ import streamlit as st
 from dashboard.components.copilot import render_chat
 
 
+def _close_copilot_dialog() -> None:
+    st.session_state.copilot_dialog_open = False
+
+
 def render_sidebar_button() -> None:
     """CTA fijo en el sidebar."""
     if st.button(
@@ -18,7 +22,11 @@ def render_sidebar_button() -> None:
         st.rerun()
 
 
-@st.dialog("Copilot — Asistente de Feedback", width="large")
+@st.dialog(
+    "Copilot — Asistente de Feedback",
+    width="large",
+    on_dismiss=_close_copilot_dialog,
+)
 def _copilot_dialog() -> None:
     head_col, close_col = st.columns([6, 1])
     with head_col:
@@ -35,7 +43,7 @@ def _copilot_dialog() -> None:
         )
     with close_col:
         if st.button("✕", key="copilot_close_x", help="Cerrar"):
-            st.session_state.copilot_dialog_open = False
+            _close_copilot_dialog()
             st.rerun()
 
     render_chat(compact=True)
