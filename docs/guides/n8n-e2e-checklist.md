@@ -70,6 +70,14 @@ Alternativa sin OAuth: Apps Script → [n8n-google-forms-apps-script.md](n8n-goo
 
 ## Verificación Supabase y dashboard
 
+### Rápido (UI)
+
+1. Dashboard → **Vista General** → **Entradas recientes** (auto-refresh 30 s)
+2. Tras el ingest: aparece el mensaje con estado **En cola** (`pendiente` en BD)
+3. Tras el worker: pasa a **Clasificado** → ver detalle en **Clasificaciones → Mensajes**
+
+### SQL (opcional)
+
 ```sql
 SELECT external_id, fuente, estado, created_at
 FROM feedback_raw
@@ -84,8 +92,6 @@ LIMIT 5;
 
 Esperado tras ingest: `estado = 'pendiente'`  
 Tras worker (~5 min): `estado = 'procesado'` + fila en `feedback_clasificado`
-
-Dashboard → **Mensajes Clasificados** debe mostrar resumen, confianza e idioma.
 
 ## Troubleshooting
 

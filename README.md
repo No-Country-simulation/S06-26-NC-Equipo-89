@@ -138,7 +138,14 @@ cd backend && ../.venv/bin/python embed_job.py
 
 ### Dashboard Streamlit (v3)
 
-Navegación: **Vista General**, **Acciones sugeridas**, **Revisar clasificaciones**, Sentimiento, Urgencia, Mensajes Clasificados, Patrones, **Temas Recurrentes**, Exportar, Carga. Copilot IA en sidebar. Auto-refresh de cola cada 30 s.
+| Grupo | Vistas |
+|-------|--------|
+| Operación | Vista General, Clasificaciones (Mensajes + Revisar) |
+| Prioridades | Urgencia y señales |
+| Análisis | Tendencias (Temas + Patrones, con filtro de período) |
+| Datos | Exportar, Carga |
+
+**Vista General** incluye **Entradas recientes** (últimas 10 de `feedback_raw`) para confirmar si n8n/carga llegó a Supabase, con auto-refresh cada 30 s. Copilot en sidebar (modal; el cierre persiste al cambiar de pestaña).
 
 Extensiones: [plan-clasificador-automejora.md](docs/plans/plan-clasificador-automejora.md)
 

@@ -206,6 +206,43 @@ html, body, [class*="css"] {
   color: #991b1b;
 }
 
+/* Entradas recientes — monitoreo de ingesta */
+.fc-entradas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.fc-entrada-row {
+  padding: 10px 12px;
+  border: 1px solid var(--fc-border);
+  border-radius: var(--fc-radius);
+  background: var(--fc-surface);
+}
+
+.fc-entrada-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.fc-entrada-when {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--fc-text-muted);
+  white-space: nowrap;
+}
+
+.fc-entrada-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--fc-text);
+  line-height: 1.35;
+}
+
 /* Empty state */
 .fc-empty {
   text-align: center;

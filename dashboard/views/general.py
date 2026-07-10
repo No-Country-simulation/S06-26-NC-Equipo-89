@@ -2,7 +2,13 @@
 
 import streamlit as st
 
-from dashboard.components import alertas, metricas, pipeline_status, sentimiento
+from dashboard.components import (
+    alertas,
+    entradas_recientes,
+    metricas,
+    pipeline_status,
+    sentimiento,
+)
 from dashboard.layout import render_page_header
 
 
@@ -18,6 +24,8 @@ def render() -> None:
             st.session_state.copilot_seen = True
             st.rerun()
 
+    entradas_recientes.render()
+    st.markdown("---")
     metricas.render()
     alertas.render()
     pipeline_status.render()

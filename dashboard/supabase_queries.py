@@ -418,6 +418,20 @@ def get_queue_health() -> dict[str, int]:
     }
 
 
+@st.cache_data(ttl=15)
+def get_entradas_recientes(limit: int = 10) -> list[dict]:
+    """Últimas filas de feedback_raw (ingesta n8n / carga) para monitoreo en vivo."""
+    client = get_client()
+    res = (
+        client.table("feedback_raw")
+        .select("external_id, fuente, texto, estado, created_at")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return res.data or []
+
+
 def get_pending_count() -> int:
     """Cantidad de mensajes en cola sin clasificar."""
     return get_queue_health()["pendientes"]

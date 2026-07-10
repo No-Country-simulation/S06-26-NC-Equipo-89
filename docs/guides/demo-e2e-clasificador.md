@@ -12,20 +12,21 @@ Checklist para demostrar las 4 fases del roadmap en la simulación.
 ## Fase 1 — Clasificador confiable
 
 - [ ] Subir CSV de prueba (`samples/plantilla_feedback.csv` o `Data/`)
-- [ ] Worker procesa cola (barra de estado: «Agente corrió»)
+- [ ] Vista General → **Entradas recientes**: el lote aparece en cola
+- [ ] Worker procesa (barra de estado: «Agente corrió»)
 - [ ] Dashboard muestra KPI **Alta confianza** (%)
-- [ ] Mensajes en **Mensajes Clasificados** con badge de confianza
+- [ ] Mensajes en **Clasificaciones → Mensajes** con badge de confianza
 
 ## Fase 2 — Acciones y alertas
 
-- [ ] Tras un ciclo, aparecen ítems en **Acciones sugeridas**
+- [ ] Tras un ciclo, aparecen ítems en **Urgencia y señales** (acciones)
 - [ ] Vista General muestra **alertas in-app** (urgencia, revisión, etc.)
 - [ ] Banner indica acciones pendientes si las hay
 - [ ] Último ciclo muestra «Acciones generadas» > 0 (si aplica)
 
 ## Fase 3 — Humano en el loop
 
-- [ ] Mensajes con confianza baja en **Revisar clasificaciones**
+- [ ] Mensajes con confianza baja en **Clasificaciones → Revisar**
 - [ ] **Confirmar** o **Corregir** vía FastAPI (`PATCH /classifications/...`)
 - [ ] `cd backend && ../.venv/bin/python scripts/export_fewshot_from_corrections.py`
 - [ ] Reiniciar worker tras bump de `GEMINI_CACHE_VERSION`
@@ -36,8 +37,9 @@ Checklist para demostrar las 4 fases del roadmap en la simulación.
 - [ ] Categorías acotadas a la taxonomía cerrada (`classification_system_v2.md`)
 - [ ] `cd backend && ../.venv/bin/python scripts/consistency_check.py --runs 3 --save-metrics`
 - [ ] Dashboard → Vista General → sección **Estabilidad del clasificador**
-- [ ] (Opcional) `--mark-unstable` → mensajes inestables en **Revisar clasificaciones** con badge «Inestable»
+- [ ] (Opcional) `--mark-unstable` → mensajes inestables en **Clasificaciones → Revisar** con badge «Inestable»
 - [ ] Detalle por mensaje con `--verbose` (esperado vs modelo en categorías)
+- [ ] **Tendencias**: Temas / Patrones con filtro de período
 
 ## Script de verificación rápida
 

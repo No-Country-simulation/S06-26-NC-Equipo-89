@@ -190,6 +190,28 @@ def test_sample_csv_template():
     assert "ejemplo-001" in content
 
 
+@patch("dashboard.supabase_queries.get_client")
+def test_get_entradas_recientes_orders_by_created_at(mock_get_client):
+    from dashboard.supabase_queries import get_entradas_recientes
+
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    chain = (
+        mock_client.table.return_value.select.return_value.order.return_value.limit.return_value
+    )
+    chain.execute.return_value = MagicMock(
+        data=[{"external_id": "e1", "fuente": "tally", "estado": "pendiente"}]
+    )
+
+    get_entradas_recientes.clear()
+    result = get_entradas_recientes(5)
+    assert len(result) == 1
+    mock_client.table.assert_called_with("feedback_raw")
+    mock_client.table.return_value.select.return_value.order.assert_called_with(
+        "created_at", desc=True
+    )
+
+
 @patch("dashboard.supabase_queries._latest_tick_id_con_patrones", return_value="tick-abc")
 @patch("dashboard.supabase_queries.get_client")
 def test_get_patrones_filters_by_latest_tick(mock_get_client, _mock_tick):

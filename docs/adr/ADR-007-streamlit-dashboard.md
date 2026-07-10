@@ -10,15 +10,14 @@
 
 ## Streamlit muestra (v3 — implementado)
 
-- Vista General (KPIs, sentimiento)
-- Sentimiento y categorías (gráficos)
-- Urgencia (distribución Alta/Media/Baja + mensajes)
-- **Mensajes clasificados** (resumen, confianza, idioma, categorías)
-- Patrones detectados
-- Export CSV/JSON con filtros
-- Carga CSV/JSON/Excel
-- Copilot RAG (modal sidebar, ADR-008)
-- Modo oscuro, health banner, status bar
+- Navegación híbrida: Operación / Prioridades / Análisis / Datos
+- Vista General: status bar, **Entradas recientes** (últimas 10 de `feedback_raw`, auto-refresh), KPIs, alertas, sentimiento
+- Clasificaciones: mensajes clasificados + revisión humana
+- Urgencia y señales (distribución + acciones)
+- Tendencias: Temas recurrentes + Patrones (filtro de período)
+- Export CSV/JSON · Carga CSV/JSON/Excel
+- Copilot RAG (modal sidebar, ADR-008; `on_dismiss` mantiene el modal cerrado)
+- Health banner, status bar, auto-refresh 30 s
 
 ## BI
 

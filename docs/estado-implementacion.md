@@ -1,6 +1,6 @@
 # Estado de implementación
 
-Última actualización: junio 2026
+Última actualización: julio 2026
 
 Resumen del producto respecto al **brief del reto Feedback Classifier** y extensiones implementadas.  
 ADRs: [adr/README.md](adr/README.md) · Índice docs: [README.md](README.md)
@@ -71,20 +71,24 @@ Worker: ciclo cada `BATCH_INTERVAL_MINUTES` (default 5).
 
 ## Dashboard (aplicado)
 
+Navegación agrupada: Operación · Prioridades · Análisis · Datos.
+
 | Vista | Contenido |
 |-------|-----------|
-| Vista General | KPIs, alertas, cola, sentimiento, calidad y estabilidad del clasificador |
-| Acciones sugeridas | Bandeja de tareas del agente |
-| Revisar clasificaciones | Confirmar / corregir baja confianza o inestabilidad |
-| Sentimiento y Categorías | Gráficos |
-| Alertas de Urgencia | Distribución y listado |
-| Mensajes Clasificados | Detalle con confianza |
-| Patrones Detectados | Último tick |
-| **Temas Recurrentes** | Top categorías del período, tendencias, variantes semánticas LLM |
+| **Vista General** | Barra de estado (cola/worker), **Entradas recientes** (últimas 10 ingestas), KPIs, alertas, sentimiento, calidad/estabilidad |
+| Clasificaciones | Mensajes clasificados + Revisar (HITL baja confianza / inestabilidad) |
+| Urgencia y señales | Distribución, listado y acciones sugeridas |
+| **Tendencias** | Temas recurrentes + patrones; filtro de período (último / 7·30·90 días / historial) |
 | Exportar / Carga | CSV/JSON out · CSV/JSON/Excel in |
-| Copilot (sidebar) | Preguntas RAG sobre feedback |
+| Copilot (sidebar) | Modal RAG; cierre persistente al refrescar o cambiar pestaña |
 
-Auto-refresh cola cada 30 s (toggle sidebar).
+Auto-refresh cola + entradas recientes cada 30 s (toggle sidebar).
+
+### Confirmar ingesta sin ir a Supabase
+
+1. Enviar mensaje (n8n / Form / WhatsApp / Tally / carga).
+2. Vista General → **Entradas recientes**: estado `En cola` = llegó a `feedback_raw`.
+3. Tras el worker (~1–5 min): estado `Clasificado` → también en **Clasificaciones → Mensajes**.
 
 ---
 
